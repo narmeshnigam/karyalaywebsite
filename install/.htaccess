@@ -1,0 +1,46 @@
+# Installation Wizard Access Control
+# This file prevents access to the installation wizard after setup is complete
+# Requirements: 10.1, 10.2
+#
+# Access Control Logic:
+# 1. Fresh Installation (no lock file): Allow all access
+# 2. Installation Complete (lock file exists):
+#    - Non-localhost: Return 403 Forbidden
+#    - Localhost (127.0.0.1, ::1): Allow through to wizard controller
+#      (The wizard controller will then redirect to main app)
+#
+# This provides security in production while allowing localhost testing/development
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /install/
+    
+    # Rule 1: Allow access if .installed lock file does not exist (fresh installation)
+    # This satisfies the "during fresh installation state" condition from Requirement 10.1
+    RewriteCond %{DOCUMENT_ROOT}/../config/.installed !-f
+    RewriteRule ^ - [L]
+    
+    # Rule 2: If lock file exists, block access from non-localhost addresses (Requirement 10.2)
+    # This prevents unauthorized access to the wizard after installation is complete
+    RewriteCond %{DOCUMENT_ROOT}/../config/.installed -f
+    RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1$
+    RewriteCond %{REMOTE_ADDR} !^::1$
+    RewriteCond %{REMOTE_HOST} !^localhost$
+    RewriteRule ^ - [F,L]
+    
+    # Rule 3: For localhost when installed, allow access through to wizard controller
+    # The wizard controller (index.php) will detect installation and redirect to main app
+    # This provides an exception for localhost development/testing as per task requirements
+</IfModule>
+
+# Deny access to sensitive files
+<FilesMatch "\.(md|json|log)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Set proper MIME types
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js
+</IfModule>

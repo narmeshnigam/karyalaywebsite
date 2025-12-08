@@ -1,0 +1,4 @@
+# Allow access to PHP files in this directory
+<Files "*.php">
+    Require all granted
+</Files>

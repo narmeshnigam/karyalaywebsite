@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      target: development
+    container_name: karyalay-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./storage/cache:/var/www/html/storage/cache
+      - ./uploads:/var/www/html/uploads
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - APP_URL=${APP_URL:-http://localhost:8080}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-karyalay_portal}
+      - DB_USER=${DB_USER:-karyalay}
+      - DB_PASS=${DB_PASS:-secret}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - karyalay-network
+
+  db:
+    image: mysql:8.0
+    container_name: karyalay-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-karyalay_portal}
+      MYSQL_USER: ${DB_USER:-karyalay}
+      MYSQL_PASSWORD: ${DB_PASS:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootsecret}
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - karyalay-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: karyalay-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - karyalay-network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: karyalay-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USER:-karyalay}
+      PMA_PASSWORD: ${DB_PASS:-secret}
+    depends_on:
+      - db
+    networks:
+      - karyalay-network
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  karyalay-network:
+    driver: bridge

@@ -1,0 +1,3 @@
+# Deny access to this directory
+# Only allow access through PHP files
+Options -Indexes

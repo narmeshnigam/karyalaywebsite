@@ -1,0 +1,16 @@
+# Admin Directory Access Control
+# Allow access to PHP files in admin directory
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /admin/
+    
+    # Redirect to dashboard if accessing /admin/ directly
+    RewriteRule ^$ dashboard.php [L]
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Set default charset
+AddDefaultCharset UTF-8

@@ -1,0 +1,29 @@
+# Karyalay Portal System - Cron Jobs
+# Copy this file to /etc/cron.d/karyalay-portal or add to user crontab
+
+# Application monitoring - every 5 minutes
+*/5 * * * * /var/www/production/bin/monitor.sh >> /var/log/karyalay-monitor.log 2>&1
+
+# Subscription expiration check - daily at 2 AM
+0 2 * * * cd /var/www/production && php bin/check-expirations.php >> /var/log/karyalay-cron.log 2>&1
+
+# Database backup - daily at 3 AM
+0 3 * * * /var/www/production/deployment/backup-database.sh >> /var/log/karyalay-backup.log 2>&1
+
+# Clear old cache files - daily at 4 AM
+0 4 * * * find /var/www/production/storage/cache -type f -mtime +7 -delete
+
+# Clear old logs - weekly on Sunday at 5 AM
+0 5 * * 0 find /var/www/production/storage/logs -type f -mtime +30 -delete
+
+# SSL certificate renewal check - daily at 6 AM
+0 6 * * * certbot renew --quiet --post-hook "systemctl reload apache2"
+
+# Generate performance reports - weekly on Monday at 1 AM
+0 1 * * 1 cd /var/www/production && php bin/generate-performance-report.php >> /var/log/karyalay-reports.log 2>&1
+
+# Clean up old backups - weekly on Sunday at 6 AM
+0 6 * * 0 find /var/www/production/backups -type f -mtime +30 -delete
+
+# Send weekly summary email - Monday at 9 AM
+0 9 * * 1 cd /var/www/production && php bin/send-weekly-summary.php >> /var/log/karyalay-reports.log 2>&1

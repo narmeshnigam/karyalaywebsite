@@ -1,0 +1,2 @@
+# Protect admin port management pages
+# Require authentication at the PHP level

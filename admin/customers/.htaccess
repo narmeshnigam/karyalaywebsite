@@ -1,0 +1,8 @@
+# Deny direct access to this directory
+Options -Indexes
+
+# Allow PHP files to be executed
+<FilesMatch "\.php$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>

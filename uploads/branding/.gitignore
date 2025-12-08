@@ -1,0 +1,10 @@
+# Ignore all uploaded logo files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+
+# But keep the directory structure
+!.gitignore
+!.htaccess

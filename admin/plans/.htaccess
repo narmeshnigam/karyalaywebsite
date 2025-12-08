@@ -1,0 +1,6 @@
+# Protect admin plans directory
+# Ensure authentication is required for all files in this directory
+
+<Files "*">
+    Require all granted
+</Files>

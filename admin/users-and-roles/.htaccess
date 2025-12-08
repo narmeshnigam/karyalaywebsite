@@ -1,0 +1,2 @@
+# Require authentication for all files in this directory
+# This is handled by PHP session checks in each file

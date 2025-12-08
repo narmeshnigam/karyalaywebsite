@@ -1,0 +1,4 @@
+# Allow access to subscription pages
+Order Allow,Deny
+Allow from all
+

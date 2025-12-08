@@ -1,0 +1,2 @@
+# Require authentication for all files in this directory
+# This is handled by the PHP files themselves via require_admin()

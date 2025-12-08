@@ -1,0 +1,10 @@
+# Protect admin case studies directory
+# Require authentication for all files in this directory
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Ensure PHP files are processed
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>

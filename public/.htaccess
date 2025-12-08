@@ -1,0 +1,25 @@
+# Allow access to this directory
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# Set index.php as the default directory index
+DirectoryIndex index.php index.html
+
+# Disable directory browsing
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>

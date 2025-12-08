@@ -1,0 +1,17 @@
+# Customer Portal .htaccess
+# Protect customer portal routes
+
+# Require authentication for all files in this directory
+# This is handled by PHP session checks in the customer-header.php template
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(env|log|ini)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
