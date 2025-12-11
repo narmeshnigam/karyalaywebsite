@@ -1,6 +1,6 @@
 # Performance Testing Suite
 
-This directory contains performance tests for the Karyalay Portal System. These tests measure page load times, database query performance, and system behavior with large datasets.
+This directory contains performance tests for the SellerPortal System. These tests measure page load times, database query performance, and system behavior with large datasets.
 
 ## Test Files
 

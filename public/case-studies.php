@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Case Studies Index Page
  */
 
@@ -117,7 +117,7 @@ include_header($page_title, $page_description);
                                 </div>
                             <?php endif; ?>
                             
-                            <a href="/karyalayportal/case-study/<?php echo urlencode($caseStudy['slug']); ?>" 
+                            <a href="<?php echo get_base_url(); ?>/case-study/<?php echo urlencode($caseStudy['slug']); ?>" 
                                class="case-study-card-link">
                                 Read Full Story
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">

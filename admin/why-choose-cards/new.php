@@ -12,6 +12,7 @@ use Karyalay\Models\WhyChooseCard;
 
 startSecureSession();
 require_admin();
+require_permission('why_choose.manage');
 
 $cardModel = new WhyChooseCard();
 
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $cardModel->create($form_data);
             if ($result) {
                 $_SESSION['admin_success'] = 'Card created successfully!';
-                header('Location: ' . get_base_url() . '/admin/why-choose-cards.php');
+                header('Location: ' . get_app_base_url() . '/admin/why-choose-cards.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create card.';
@@ -66,7 +67,7 @@ include_admin_header('Create Why Choose Card');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards.php">Why Choose Cards</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards.php">Why Choose Cards</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Card</span>
         </nav>
@@ -74,7 +75,7 @@ include_admin_header('Create Why Choose Card');
         <p class="admin-page-description">Add a new card to the "Why Choose Karyalay" section</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-secondary">← Back to Cards</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-secondary">← Back to Cards</a>
     </div>
 </div>
 
@@ -90,7 +91,7 @@ include_admin_header('Create Why Choose Card');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/why-choose-cards/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/why-choose-cards/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -154,7 +155,7 @@ include_admin_header('Create Why Choose Card');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Card</button>
-            <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

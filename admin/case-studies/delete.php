@@ -14,14 +14,15 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and case_studies.manage permission
 require_admin();
+require_permission('case_studies.manage');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $_SESSION['flash_message'] = 'Invalid request method.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/case-studies.php');
+    header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
     exit;
 }
 
@@ -32,7 +33,7 @@ $contentService = new ContentService();
 if (!validateCsrfToken()) {
     $_SESSION['flash_message'] = 'Invalid security token. Please try again.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/case-studies.php');
+    header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
     exit;
 }
 
@@ -42,7 +43,7 @@ $case_study_id = $_POST['id'] ?? '';
 if (empty($case_study_id)) {
     $_SESSION['flash_message'] = 'Case study ID is required.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/case-studies.php');
+    header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
     exit;
 }
 
@@ -64,5 +65,5 @@ try {
 }
 
 // Redirect back to case studies list
-header('Location: ' . get_base_url() . '/admin/case-studies.php');
+header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
 exit;

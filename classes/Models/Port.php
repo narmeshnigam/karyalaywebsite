@@ -23,42 +23,53 @@ class Port
     /**
      * Create a new port
      * 
-     * @param array $data Port data (instance_url, db_host, db_name, db_username, db_password, plan_id, status, assigned_customer_id, assigned_subscription_id, assigned_at, server_region, notes)
+     * @param array $data Port data (instance_url, db_host, db_name, db_username, db_password, status, assigned_subscription_id, assigned_at, server_region, notes, setup_instructions)
      * @return array|false Returns port data with id on success, false on failure
      */
     public function create(array $data)
     {
         try {
             $id = $this->generateUuid();
+            error_log('Port::create - Starting with ID: ' . $id);
+            error_log('Port::create - Data received: ' . json_encode($data));
 
             $sql = "INSERT INTO ports (
-                id, instance_url, db_host, db_name, db_username, db_password, plan_id, status, assigned_customer_id, 
-                assigned_subscription_id, assigned_at, server_region, notes
+                id, instance_url, db_host, db_name, db_username, db_password, 
+                status, assigned_subscription_id, assigned_at, server_region, notes, setup_instructions
             ) VALUES (
-                :id, :instance_url, :db_host, :db_name, :db_username, :db_password, :plan_id, :status, :assigned_customer_id, 
-                :assigned_subscription_id, :assigned_at, :server_region, :notes
+                :id, :instance_url, :db_host, :db_name, :db_username, :db_password, 
+                :status, :assigned_subscription_id, :assigned_at, :server_region, :notes, :setup_instructions
             )";
 
+            error_log('Port::create - Preparing SQL statement');
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([
+            
+            $params = [
                 ':id' => $id,
                 ':instance_url' => $data['instance_url'],
                 ':db_host' => $data['db_host'] ?? null,
                 ':db_name' => $data['db_name'] ?? null,
                 ':db_username' => $data['db_username'] ?? null,
                 ':db_password' => $data['db_password'] ?? null,
-                ':plan_id' => $data['plan_id'],
                 ':status' => $data['status'] ?? 'AVAILABLE',
-                ':assigned_customer_id' => $data['assigned_customer_id'] ?? null,
                 ':assigned_subscription_id' => $data['assigned_subscription_id'] ?? null,
                 ':assigned_at' => $data['assigned_at'] ?? null,
                 ':server_region' => $data['server_region'] ?? null,
-                ':notes' => $data['notes'] ?? null
-            ]);
+                ':notes' => $data['notes'] ?? null,
+                ':setup_instructions' => $data['setup_instructions'] ?? null
+            ];
+            
+            error_log('Port::create - Executing with params (password hidden): ' . json_encode(array_merge($params, [':db_password' => '***HIDDEN***'])));
+            $stmt->execute($params);
+            error_log('Port::create - Execute successful, fetching created port');
 
-            return $this->findById($id);
+            $result = $this->findById($id);
+            error_log('Port::create - Returning: ' . ($result ? 'port data' : 'false'));
+            return $result;
         } catch (PDOException $e) {
-            error_log('Port creation failed: ' . $e->getMessage());
+            error_log('Port::create FAILED - PDOException: ' . $e->getMessage());
+            error_log('Port::create FAILED - SQL State: ' . $e->getCode());
+            error_log('Port::create FAILED - Stack trace: ' . $e->getTraceAsString());
             return false;
         }
     }
@@ -85,31 +96,6 @@ class Port
     }
 
     /**
-     * Find ports by plan ID
-     * 
-     * @param string $planId Plan ID
-     * @param int $limit Optional limit
-     * @param int $offset Optional offset
-     * @return array Returns array of ports
-     */
-    public function findByPlanId(string $planId, int $limit = 100, int $offset = 0): array
-    {
-        try {
-            $sql = "SELECT * FROM ports WHERE plan_id = :plan_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':plan_id', $planId);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log('Port find by plan ID failed: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
      * Find port by subscription ID
      * 
      * @param string $subscriptionId Subscription ID
@@ -131,25 +117,42 @@ class Port
     }
 
     /**
-     * Find available ports for a plan
+     * Find available ports (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @param int $limit Optional limit
      * @return array Returns array of available ports
      */
-    public function findAvailableByPlanId(string $planId, int $limit = 1): array
+    public function findAvailable(int $limit = 1): array
     {
         try {
-            $sql = "SELECT * FROM ports WHERE plan_id = :plan_id AND status = 'AVAILABLE' ORDER BY created_at ASC LIMIT :limit";
+            $sql = "SELECT * FROM ports WHERE status = 'AVAILABLE' ORDER BY created_at ASC LIMIT :limit";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':plan_id', $planId);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->execute();
             
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            error_log('Port find available by plan ID failed: ' . $e->getMessage());
+            error_log('Port find available failed: ' . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Count all available ports (plan-agnostic)
+     * 
+     * @return int Returns count of available ports
+     */
+    public function countAvailable(): int
+    {
+        try {
+            $sql = "SELECT COUNT(*) FROM ports WHERE status = 'AVAILABLE'";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            
+            return (int) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log('Port count available failed: ' . $e->getMessage());
+            return 0;
         }
     }
 
@@ -165,8 +168,7 @@ class Port
         try {
             $allowedFields = [
                 'instance_url', 'db_host', 'db_name', 'db_username', 'db_password',
-                'plan_id', 'status', 'assigned_customer_id', 'assigned_subscription_id', 
-                'assigned_at', 'server_region', 'notes'
+                'status', 'assigned_subscription_id', 'assigned_at', 'server_region', 'notes', 'setup_instructions'
             ];
             $updateFields = [];
             $params = [':id' => $id];
@@ -214,7 +216,7 @@ class Port
     /**
      * Get all ports with optional filters
      * 
-     * @param array $filters Optional filters (plan_id, status, assigned_customer_id, assigned_subscription_id)
+     * @param array $filters Optional filters (status, assigned_subscription_id)
      * @param int $limit Optional limit
      * @param int $offset Optional offset
      * @return array Returns array of ports
@@ -225,19 +227,9 @@ class Port
             $sql = "SELECT * FROM ports WHERE 1=1";
             $params = [];
 
-            if (isset($filters['plan_id'])) {
-                $sql .= " AND plan_id = :plan_id";
-                $params[':plan_id'] = $filters['plan_id'];
-            }
-
             if (isset($filters['status'])) {
                 $sql .= " AND status = :status";
                 $params[':status'] = $filters['status'];
-            }
-
-            if (isset($filters['assigned_customer_id'])) {
-                $sql .= " AND assigned_customer_id = :assigned_customer_id";
-                $params[':assigned_customer_id'] = $filters['assigned_customer_id'];
             }
 
             if (isset($filters['assigned_subscription_id'])) {
@@ -281,16 +273,14 @@ class Port
      * 
      * @param string $id Port ID
      * @param string $subscriptionId Subscription ID
-     * @param string $customerId Customer ID
      * @param string $assignedAt Assignment timestamp
      * @return bool Returns true on success, false on failure
      */
-    public function assignToSubscription(string $id, string $subscriptionId, string $customerId, string $assignedAt): bool
+    public function assignToSubscription(string $id, string $subscriptionId, string $assignedAt): bool
     {
         return $this->update($id, [
             'status' => 'ASSIGNED',
             'assigned_subscription_id' => $subscriptionId,
-            'assigned_customer_id' => $customerId,
             'assigned_at' => $assignedAt
         ]);
     }
@@ -306,7 +296,6 @@ class Port
         return $this->update($id, [
             'status' => 'AVAILABLE',
             'assigned_subscription_id' => null,
-            'assigned_customer_id' => null,
             'assigned_at' => null
         ]);
     }
@@ -336,26 +325,6 @@ class Port
         } catch (PDOException $e) {
             error_log('Port exists check failed: ' . $e->getMessage());
             return false;
-        }
-    }
-
-    /**
-     * Count available ports for a plan
-     * 
-     * @param string $planId Plan ID
-     * @return int Returns count of available ports
-     */
-    public function countAvailableByPlanId(string $planId): int
-    {
-        try {
-            $sql = "SELECT COUNT(*) FROM ports WHERE plan_id = :plan_id AND status = 'AVAILABLE'";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([':plan_id' => $planId]);
-            
-            return (int) $stmt->fetchColumn();
-        } catch (PDOException $e) {
-            error_log('Port count available failed: ' . $e->getMessage());
-            return 0;
         }
     }
 

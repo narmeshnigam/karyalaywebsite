@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Error - Karyalay Portal</title>
+    <title>Server Error - SellerPortal</title>
     <style>
         * {
             margin: 0;
@@ -110,7 +110,7 @@
         
         <div class="support-info">
             If the problem persists, please contact our support team at 
-            <strong><?php echo htmlspecialchars(getenv('ADMIN_EMAIL') ?: 'support@karyalay.com'); ?></strong>
+            <strong><?php echo htmlspecialchars(getenv('ADMIN_EMAIL') ?: 'support@example.com'); ?></strong>
         </div>
     </div>
 </body>

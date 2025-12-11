@@ -326,7 +326,7 @@ class DashboardDataCompletenessPropertyTest extends TestCase
         $orderData = [
             'customer_id' => $customerId,
             'plan_id' => $planId,
-            'amount' => $plan['price'],
+            'amount' => !empty($plan['discounted_price']) ? $plan['discounted_price'] : $plan['mrp'],
             'currency' => $plan['currency'],
             'status' => $status,
             'payment_method' => 'card'

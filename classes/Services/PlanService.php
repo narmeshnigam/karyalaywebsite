@@ -22,7 +22,7 @@ class PlanService
     /**
      * Create a new plan
      * 
-     * @param array $data Plan data (name, slug, description, price, currency, billing_period_months, features, status)
+     * @param array $data Plan data (name, slug, description, price, currency, billing_period_months, features, status, number_of_users, allowed_storage_gb, mrp, discounted_price, features_html)
      * @return array|false Returns created plan with id on success, false on failure
      */
     public function create(array $data)
@@ -58,15 +58,33 @@ class PlanService
             $data['status'] = 'ACTIVE';
         }
 
-        // Validate price
-        if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
-            error_log("Plan creation failed: Invalid price");
-            return false;
-        }
-
         // Validate billing period
         if (isset($data['billing_period_months']) && (!is_numeric($data['billing_period_months']) || $data['billing_period_months'] <= 0)) {
             error_log("Plan creation failed: Invalid billing period");
+            return false;
+        }
+
+        // Validate MRP (required)
+        if (!isset($data['mrp']) || $data['mrp'] === '' || !is_numeric($data['mrp']) || $data['mrp'] < 0) {
+            error_log("Plan creation failed: Invalid or missing MRP");
+            return false;
+        }
+
+        // Validate discounted price if provided
+        if (isset($data['discounted_price']) && $data['discounted_price'] !== '' && (!is_numeric($data['discounted_price']) || $data['discounted_price'] < 0)) {
+            error_log("Plan creation failed: Invalid discounted price");
+            return false;
+        }
+
+        // Validate number of users if provided
+        if (isset($data['number_of_users']) && $data['number_of_users'] !== '' && (!is_numeric($data['number_of_users']) || $data['number_of_users'] < 0)) {
+            error_log("Plan creation failed: Invalid number of users");
+            return false;
+        }
+
+        // Validate allowed storage if provided
+        if (isset($data['allowed_storage_gb']) && $data['allowed_storage_gb'] !== '' && (!is_numeric($data['allowed_storage_gb']) || $data['allowed_storage_gb'] < 0)) {
+            error_log("Plan creation failed: Invalid allowed storage");
             return false;
         }
 
@@ -121,15 +139,33 @@ class PlanService
             return false;
         }
 
-        // Validate price if provided
-        if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
-            error_log("Plan update failed: Invalid price");
-            return false;
-        }
-
         // Validate billing period if provided
         if (isset($data['billing_period_months']) && (!is_numeric($data['billing_period_months']) || $data['billing_period_months'] <= 0)) {
             error_log("Plan update failed: Invalid billing period");
+            return false;
+        }
+
+        // Validate MRP if provided (must be valid if present)
+        if (isset($data['mrp']) && $data['mrp'] !== '' && $data['mrp'] !== null && (!is_numeric($data['mrp']) || $data['mrp'] < 0)) {
+            error_log("Plan update failed: Invalid MRP");
+            return false;
+        }
+
+        // Validate discounted price if provided
+        if (isset($data['discounted_price']) && $data['discounted_price'] !== '' && $data['discounted_price'] !== null && (!is_numeric($data['discounted_price']) || $data['discounted_price'] < 0)) {
+            error_log("Plan update failed: Invalid discounted price");
+            return false;
+        }
+
+        // Validate number of users if provided
+        if (isset($data['number_of_users']) && $data['number_of_users'] !== '' && $data['number_of_users'] !== null && (!is_numeric($data['number_of_users']) || $data['number_of_users'] < 0)) {
+            error_log("Plan update failed: Invalid number of users");
+            return false;
+        }
+
+        // Validate allowed storage if provided
+        if (isset($data['allowed_storage_gb']) && $data['allowed_storage_gb'] !== '' && $data['allowed_storage_gb'] !== null && (!is_numeric($data['allowed_storage_gb']) || $data['allowed_storage_gb'] < 0)) {
+            error_log("Plan update failed: Invalid allowed storage");
             return false;
         }
 
@@ -150,7 +186,7 @@ class PlanService
     /**
      * Find all plans with optional filters
      * 
-     * @param array $filters Optional filters (status)
+     * @param array $filters Optional filters (status, billing_period_months, duration)
      * @param int $limit Optional limit
      * @param int $offset Optional offset
      * @return array Returns array of plans
@@ -163,7 +199,86 @@ class PlanService
             return [];
         }
 
+        // Validate duration filter if provided
+        $validDurations = ['all', 'monthly', 'quarterly', 'annual'];
+        if (isset($filters['duration']) && !in_array($filters['duration'], $validDurations)) {
+            error_log("Invalid duration filter: {$filters['duration']}");
+            return [];
+        }
+
         return $this->planModel->findAll($filters, $limit, $offset);
+    }
+
+    /**
+     * Get plans grouped by duration
+     * 
+     * @return array Returns array of plans grouped by duration category
+     */
+    public function getPlansByDuration(): array
+    {
+        $allPlans = $this->getActivePlans();
+        
+        $grouped = [
+            'monthly' => [],
+            'quarterly' => [],
+            'annual' => [],
+            'other' => []
+        ];
+
+        foreach ($allPlans as $plan) {
+            $months = (int) $plan['billing_period_months'];
+            if ($months === 1) {
+                $grouped['monthly'][] = $plan;
+            } elseif ($months === 3) {
+                $grouped['quarterly'][] = $plan;
+            } elseif ($months === 12) {
+                $grouped['annual'][] = $plan;
+            } else {
+                $grouped['other'][] = $plan;
+            }
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * Get the effective price for a plan (discounted if available, otherwise MRP)
+     * 
+     * @param array $plan Plan data
+     * @return float The effective price
+     */
+    public function getEffectivePrice(array $plan): float
+    {
+        if (!empty($plan['discounted_price']) && $plan['discounted_price'] > 0) {
+            return (float) $plan['discounted_price'];
+        }
+        return (float) ($plan['mrp'] ?? 0);
+    }
+
+    /**
+     * Check if plan has a discount
+     * 
+     * @param array $plan Plan data
+     * @return bool True if plan has discount
+     */
+    public function hasDiscount(array $plan): bool
+    {
+        return !empty($plan['mrp']) && !empty($plan['discounted_price']) 
+            && $plan['mrp'] > $plan['discounted_price'];
+    }
+
+    /**
+     * Get discount percentage
+     * 
+     * @param array $plan Plan data
+     * @return float Discount percentage (0-100)
+     */
+    public function getDiscountPercentage(array $plan): float
+    {
+        if (!$this->hasDiscount($plan)) {
+            return 0;
+        }
+        return round((($plan['mrp'] - $plan['discounted_price']) / $plan['mrp']) * 100, 1);
     }
 
     /**
@@ -234,7 +349,7 @@ class PlanService
      */
     private function validateRequiredFields(array $data): bool
     {
-        $requiredFields = ['name', 'price', 'billing_period_months'];
+        $requiredFields = ['name', 'mrp', 'billing_period_months'];
         
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || (is_string($data[$field]) && trim($data[$field]) === '')) {

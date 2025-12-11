@@ -36,10 +36,10 @@ class PortService
     {
         try {
             // Validate required fields
-            if (empty($data['instance_url']) || empty($data['plan_id'])) {
+            if (empty($data['instance_url'])) {
                 return [
                     'success' => false,
-                    'error' => 'Missing required fields: instance_url and plan_id are required'
+                    'error' => 'Missing required field: instance_url is required'
                 ];
             }
 
@@ -47,7 +47,8 @@ class PortService
             if ($this->portModel->portExists($data['instance_url'])) {
                 return [
                     'success' => false,
-                    'error' => 'Port with this instance URL already exists'
+                    'error' => 'Port with this instance URL already exists',
+                    'error_code' => 'DUPLICATE_INSTANCE'
                 ];
             }
 
@@ -65,14 +66,21 @@ class PortService
                 ];
             }
 
+            error_log('PortService::createPort - Calling portModel->create with data: ' . json_encode($data));
             $port = $this->portModel->create($data);
+            error_log('PortService::createPort - portModel->create returned: ' . ($port ? json_encode($port) : 'false'));
 
             if (!$port) {
+                error_log('PortService::createPort - Port creation failed, portModel->create returned false');
                 return [
                     'success' => false,
-                    'error' => 'Failed to create port'
+                    'error' => 'Failed to create port - database operation failed. Check error logs for details.',
+                    'error_code' => 'DB_CREATE_FAILED'
                 ];
             }
+
+            // Log port creation
+            $this->logModel->logCreation($port['id'], $data['created_by'] ?? null);
 
             return [
                 'success' => true,
@@ -155,7 +163,8 @@ class PortService
                 if ($this->portModel->portExists($instanceUrl, $portId)) {
                     return [
                         'success' => false,
-                        'error' => 'Port with this instance URL already exists'
+                        'error' => 'Port with this instance URL already exists',
+                        'error_code' => 'DUPLICATE_INSTANCE'
                     ];
                 }
             }
@@ -280,16 +289,15 @@ class PortService
     }
 
     /**
-     * Get available ports for a plan
+     * Get available ports (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @param int $limit Optional limit
      * @return array Returns array with 'success' boolean and 'ports' or 'error'
      */
-    public function getAvailablePorts(string $planId, int $limit = 10): array
+    public function getAvailablePorts(int $limit = 10): array
     {
         try {
-            $ports = $this->portModel->findAvailableByPlanId($planId, $limit);
+            $ports = $this->portModel->findAvailable($limit);
 
             return [
                 'success' => true,
@@ -306,15 +314,14 @@ class PortService
     }
 
     /**
-     * Count available ports for a plan
+     * Count available ports (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return int Returns count of available ports
      */
-    public function countAvailablePorts(string $planId): int
+    public function countAvailablePorts(): int
     {
         try {
-            return $this->portModel->countAvailableByPlanId($planId);
+            return $this->portModel->countAvailable();
         } catch (\Exception $e) {
             error_log('PortService::countAvailablePorts failed: ' . $e->getMessage());
             return 0;

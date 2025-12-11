@@ -7,7 +7,7 @@ use Karyalay\Models\Port;
 /**
  * Port Availability Service
  * 
- * Handles port availability checks for plans
+ * Handles port availability checks (plan-agnostic)
  */
 class PortAvailabilityService
 {
@@ -19,15 +19,14 @@ class PortAvailabilityService
     }
 
     /**
-     * Check if ports are available for a plan
+     * Check if ports are available (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return array Returns array with 'available' boolean and 'count' integer
      */
-    public function checkAvailability(string $planId): array
+    public function checkAvailability(): array
     {
         try {
-            $count = $this->portModel->countAvailableByPlanId($planId);
+            $count = $this->portModel->countAvailable();
             
             return [
                 'available' => $count > 0,
@@ -44,40 +43,37 @@ class PortAvailabilityService
     }
 
     /**
-     * Check if at least one port is available for a plan
+     * Check if at least one port is available (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return bool Returns true if at least one port is available
      */
-    public function hasAvailablePorts(string $planId): bool
+    public function hasAvailablePorts(): bool
     {
-        $result = $this->checkAvailability($planId);
+        $result = $this->checkAvailability();
         return $result['available'];
     }
 
     /**
-     * Get count of available ports for a plan
+     * Get count of available ports (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return int Returns count of available ports
      */
-    public function getAvailablePortsCount(string $planId): int
+    public function getAvailablePortsCount(): int
     {
-        $result = $this->checkAvailability($planId);
+        $result = $this->checkAvailability();
         return $result['count'];
     }
 
     /**
-     * Get available ports for a plan
+     * Get available ports (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @param int $limit Optional limit (default 10)
      * @return array Returns array of available ports
      */
-    public function getAvailablePorts(string $planId, int $limit = 10): array
+    public function getAvailablePorts(int $limit = 10): array
     {
         try {
-            return $this->portModel->findAvailableByPlanId($planId, $limit);
+            return $this->portModel->findAvailable($limit);
         } catch (\Exception $e) {
             error_log('Get available ports failed: ' . $e->getMessage());
             return [];
@@ -85,19 +81,18 @@ class PortAvailabilityService
     }
 
     /**
-     * Validate checkout can proceed for a plan
+     * Validate checkout can proceed (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return array Returns array with 'can_proceed' boolean and optional 'message'
      */
-    public function validateCheckout(string $planId): array
+    public function validateCheckout(): array
     {
-        $availability = $this->checkAvailability($planId);
+        $availability = $this->checkAvailability();
         
         if (!$availability['available']) {
             return [
                 'can_proceed' => false,
-                'message' => 'No available ports for this plan. Please contact support or try a different plan.'
+                'message' => 'No available ports. Please contact support.'
             ];
         }
         

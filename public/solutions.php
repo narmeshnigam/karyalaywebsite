@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Solutions Overview Page
  */
 

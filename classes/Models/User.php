@@ -36,6 +36,8 @@ class User
                 ? password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12])
                 : $data['password_hash'];
 
+            $role = $data['role'] ?? 'CUSTOMER';
+
             $sql = "INSERT INTO users (
                 id, email, password_hash, name, phone, business_name, role, email_verified
             ) VALUES (
@@ -50,9 +52,26 @@ class User
                 ':name' => $data['name'],
                 ':phone' => $data['phone'] ?? null,
                 ':business_name' => $data['business_name'] ?? null,
-                ':role' => $data['role'] ?? 'CUSTOMER',
+                ':role' => $role,
                 ':email_verified' => isset($data['email_verified']) ? (int)$data['email_verified'] : 0
             ]);
+
+            // Add roles to user_roles table
+            // All users get CUSTOMER role by default
+            $roles = ['CUSTOMER'];
+            if ($role !== 'CUSTOMER') {
+                $roles[] = $role;
+            }
+            
+            try {
+                $roleStmt = $this->db->prepare("INSERT INTO user_roles (user_id, role) VALUES (:user_id, :role) ON DUPLICATE KEY UPDATE role = VALUES(role)");
+                foreach ($roles as $r) {
+                    $roleStmt->execute([':user_id' => $id, ':role' => $r]);
+                }
+            } catch (PDOException $e) {
+                // user_roles table might not exist yet, log but don't fail
+                error_log('Could not add user roles (table may not exist): ' . $e->getMessage());
+            }
 
             return $this->findById($id);
         } catch (PDOException $e) {
@@ -140,6 +159,95 @@ class User
             return $stmt->execute($params);
         } catch (PDOException $e) {
             error_log('User update failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get all roles for a user
+     * 
+     * @param string $id User ID
+     * @return array Array of role names
+     */
+    public function getRoles(string $id): array
+    {
+        try {
+            $sql = "SELECT role FROM user_roles WHERE user_id = :user_id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':user_id' => $id]);
+            $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            // Fallback to users.role if user_roles is empty
+            if (empty($roles)) {
+                $user = $this->findById($id);
+                if ($user && !empty($user['role'])) {
+                    $roles = [$user['role']];
+                    if ($user['role'] !== 'CUSTOMER') {
+                        $roles[] = 'CUSTOMER';
+                    }
+                }
+            }
+            
+            return $roles;
+        } catch (PDOException $e) {
+            error_log('Get user roles failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Set roles for a user (replaces existing roles)
+     * 
+     * @param string $id User ID
+     * @param array $roles Array of role names
+     * @param string|null $assignedBy User ID of who assigned the roles
+     * @return bool Returns true on success, false on failure
+     */
+    public function setRoles(string $id, array $roles, ?string $assignedBy = null): bool
+    {
+        try {
+            // Ensure CUSTOMER role is always included
+            if (!in_array('CUSTOMER', $roles)) {
+                $roles[] = 'CUSTOMER';
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Remove all existing roles
+            $stmt = $this->db->prepare("DELETE FROM user_roles WHERE user_id = :user_id");
+            $stmt->execute([':user_id' => $id]);
+            
+            // Add new roles
+            $stmt = $this->db->prepare("
+                INSERT INTO user_roles (user_id, role, assigned_by)
+                VALUES (:user_id, :role, :assigned_by)
+            ");
+            
+            foreach ($roles as $role) {
+                $stmt->execute([
+                    ':user_id' => $id,
+                    ':role' => $role,
+                    ':assigned_by' => $assignedBy
+                ]);
+            }
+            
+            // Update primary role in users table
+            $primaryRole = 'CUSTOMER';
+            foreach ($roles as $role) {
+                if ($role !== 'CUSTOMER') {
+                    $primaryRole = $role;
+                    break;
+                }
+            }
+            
+            $stmt = $this->db->prepare("UPDATE users SET role = :role WHERE id = :user_id");
+            $stmt->execute([':role' => $primaryRole, ':user_id' => $id]);
+            
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('Set user roles failed: ' . $e->getMessage());
             return false;
         }
     }

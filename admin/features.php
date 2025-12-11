@@ -13,8 +13,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and content.view permission
 require_admin();
+require_permission('content.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -113,8 +114,7 @@ include_admin_header('Features');
         <p class="admin-page-description">Manage product features displayed on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/features/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/features/new.php" class="btn btn-primary">
             Create New Feature
         </a>
     </div>
@@ -122,7 +122,7 @@ include_admin_header('Features');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/features.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/features.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -147,7 +147,7 @@ include_admin_header('Features');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/features.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/features.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -159,7 +159,7 @@ include_admin_header('Features');
         render_empty_state(
             'No features found',
             'Get started by creating your first feature',
-            get_base_url() . '/admin/features/new.php',
+            get_app_base_url() . '/admin/features/new.php',
             'Create Feature'
         );
         ?>
@@ -205,12 +205,12 @@ include_admin_header('Features');
                             <td><?php echo get_relative_time($feature['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/features/edit.php?id=<?php echo urlencode($feature['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/features/edit.php?id=<?php echo urlencode($feature['id']); ?>" 
                                        class="btn btn-sm btn-secondary"
                                        title="Edit feature">
                                         Edit
                                     </a>
-                                    <a href="<?php echo get_base_url(); ?>/feature/<?php echo urlencode($feature['slug']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/feature/<?php echo urlencode($feature['slug']); ?>" 
                                        class="btn btn-sm btn-text"
                                        target="_blank"
                                        title="View on site">
@@ -228,7 +228,7 @@ include_admin_header('Features');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = get_base_url() . '/admin/features.php';
+                $base_url = get_app_base_url() . '/admin/features.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);

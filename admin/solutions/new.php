@@ -13,6 +13,7 @@ use Karyalay\Services\InputSanitizationService;
 
 startSecureSession();
 require_admin();
+require_permission('solutions.manage');
 
 $contentService = new ContentService();
 $sanitizationService = new InputSanitizationService();
@@ -89,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Solution created successfully!';
-                header('Location: ' . get_base_url() . '/admin/solutions.php');
+                header('Location: ' . get_app_base_url() . '/admin/solutions.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create solution. Please check if the slug is unique.';
@@ -105,7 +106,7 @@ include_admin_header('Create Solution');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/solutions.php">Solutions</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/solutions.php">Solutions</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Solution</span>
         </nav>
@@ -113,7 +114,7 @@ include_admin_header('Create Solution');
         <p class="admin-page-description">Add a new solution to display on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/solutions.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/solutions.php" class="btn btn-secondary">
             ← Back to Solutions
         </a>
     </div>
@@ -131,7 +132,7 @@ include_admin_header('Create Solution');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/solutions/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/solutions/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -253,7 +254,7 @@ include_admin_header('Create Solution');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Solution</button>
-            <a href="<?php echo get_base_url(); ?>/admin/solutions.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/solutions.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

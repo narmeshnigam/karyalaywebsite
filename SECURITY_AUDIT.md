@@ -1,5 +1,5 @@
 # Security Audit Report
-## Karyalay Portal System
+## SellerPortal System
 
 **Date:** December 7, 2025  
 **Auditor:** Kiro AI Security Audit  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This security audit reviewed all authentication, authorization, CSRF protection, input sanitization, and password hashing implementations in the Karyalay Portal System. The system demonstrates **strong security practices** with comprehensive property-based testing coverage.
+This security audit reviewed all authentication, authorization, CSRF protection, input sanitization, and password hashing implementations in the SellerPortal System. The system demonstrates **strong security practices** with comprehensive property-based testing coverage.
 
 ### Overall Security Rating: ✅ **EXCELLENT**
 
@@ -562,7 +562,7 @@ All critical security measures are properly implemented.
 
 ## 12. Conclusion
 
-The Karyalay Portal System demonstrates **excellent security practices** across all audited areas:
+The SellerPortal System demonstrates **excellent security practices** across all audited areas:
 
 ### Strengths:
 ✅ **Comprehensive security implementation**  

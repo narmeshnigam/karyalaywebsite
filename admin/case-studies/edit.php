@@ -14,8 +14,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and case_studies.manage permission
 require_admin();
+require_permission('case_studies.manage');
 
 // Initialize services
 $contentService = new ContentService();
@@ -26,7 +27,7 @@ $case_study_id = $_GET['id'] ?? '';
 if (empty($case_study_id)) {
     $_SESSION['flash_message'] = 'Case study ID is required.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/case-studies.php');
+    header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
     exit;
 }
 
@@ -36,7 +37,7 @@ $case_study = $contentService->read('case_study', $case_study_id);
 if (!$case_study) {
     $_SESSION['flash_message'] = 'Case study not found.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/case-studies.php');
+    header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
     exit;
 }
 
@@ -121,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $_SESSION['flash_message'] = 'Case study updated successfully!';
                 $_SESSION['flash_type'] = 'success';
-                header('Location: ' . get_base_url() . '/admin/case-studies.php');
+                header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update case study. Please check if the slug is unique.';
@@ -143,7 +144,7 @@ include_admin_header('Edit Case Study');
         <p class="admin-page-description">Update case study information</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">
             ← Back to Case Studies
         </a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">
@@ -163,7 +164,7 @@ include_admin_header('Edit Case Study');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/case-studies/edit.php?id=<?php echo urlencode($case_study_id); ?>" class="admin-form">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/case-studies/edit.php?id=<?php echo urlencode($case_study_id); ?>" class="admin-form">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     
     <div class="admin-card">
@@ -326,12 +327,12 @@ include_admin_header('Edit Case Study');
     
     <div class="admin-form-actions">
         <button type="submit" class="btn btn-primary">Update Case Study</button>
-        <a href="<?php echo get_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">Cancel</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">Cancel</a>
     </div>
 </form>
 
 <!-- Delete Confirmation Form (hidden) -->
-<form id="deleteForm" method="POST" action="<?php echo get_base_url(); ?>/admin/case-studies/delete.php" style="display: none;">
+<form id="deleteForm" method="POST" action="<?php echo get_app_base_url(); ?>/admin/case-studies/delete.php" style="display: none;">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="id" value="<?php echo htmlspecialchars($case_study_id); ?>">
 </form>

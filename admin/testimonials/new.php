@@ -12,6 +12,7 @@ use Karyalay\Models\Testimonial;
 
 startSecureSession();
 require_admin();
+require_permission('testimonials.manage');
 
 $testimonialModel = new Testimonial();
 
@@ -63,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Testimonial created successfully!';
-                header('Location: ' . get_base_url() . '/admin/testimonials.php');
+                header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create testimonial.';
@@ -79,7 +80,7 @@ include_admin_header('Create Testimonial');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/testimonials.php">Testimonials</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php">Testimonials</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Testimonial</span>
         </nav>
@@ -87,7 +88,7 @@ include_admin_header('Create Testimonial');
         <p class="admin-page-description">Add a new customer testimonial</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">
             ← Back to Testimonials
         </a>
     </div>
@@ -105,7 +106,7 @@ include_admin_header('Create Testimonial');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/testimonials/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/testimonials/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -212,7 +213,7 @@ include_admin_header('Create Testimonial');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Testimonial</button>
-            <a href="<?php echo get_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

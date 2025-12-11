@@ -4,7 +4,7 @@ This document provides instructions for setting up a Content Delivery Network (C
 
 ## Overview
 
-The Karyalay Portal System supports CDN integration for serving static assets (CSS, JavaScript, images, fonts) to improve page load times and reduce server load.
+The SellerPortal System supports CDN integration for serving static assets (CSS, JavaScript, images, fonts) to improve page load times and reduce server load.
 
 ## Benefits of Using a CDN
 

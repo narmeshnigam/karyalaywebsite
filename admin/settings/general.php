@@ -14,8 +14,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and settings.general permission
 require_admin();
+require_permission('settings.general');
 
 // Initialize Setting model
 $settingModel = new Setting();
@@ -27,7 +28,7 @@ $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate CSRF token
-    if (!$csrfMiddleware->validateToken($_POST['csrf_token'] ?? '')) {
+    if (!$csrfMiddleware->validate()) {
         $error_message = 'Invalid security token. Please try again.';
     } else {
         try {
@@ -36,9 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $contact_email = trim($_POST['contact_email'] ?? '');
             $contact_phone = trim($_POST['contact_phone'] ?? '');
             $contact_address = trim($_POST['contact_address'] ?? '');
+            $notifications_email = trim($_POST['notifications_email'] ?? '');
             $business_hours_weekday = trim($_POST['business_hours_weekday'] ?? '');
             $business_hours_weekend = trim($_POST['business_hours_weekend'] ?? '');
-            $footer_text = trim($_POST['footer_text'] ?? '');
+            $footer_company_description = trim($_POST['footer_company_description'] ?? '');
+            $footer_copyright_text = trim($_POST['footer_copyright_text'] ?? '');
             
             // Validate required fields
             if (empty($site_name)) {
@@ -53,14 +56,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Invalid email format');
             }
             
+            // Validate notifications email if provided
+            if (!empty($notifications_email) && !filter_var($notifications_email, FILTER_VALIDATE_EMAIL)) {
+                throw new Exception('Invalid notifications email format');
+            }
+            
             // Save settings
             $settingModel->set('site_name', $site_name);
             $settingModel->set('contact_email', $contact_email);
             $settingModel->set('contact_phone', $contact_phone);
             $settingModel->set('contact_address', $contact_address);
+            $settingModel->set('notifications_email', $notifications_email);
             $settingModel->set('business_hours_weekday', $business_hours_weekday);
             $settingModel->set('business_hours_weekend', $business_hours_weekend);
-            $settingModel->set('footer_text', $footer_text);
+            $settingModel->set('footer_company_description', $footer_company_description);
+            $settingModel->set('footer_copyright_text', $footer_copyright_text);
             
             $success_message = 'General settings saved successfully!';
         } catch (Exception $e) {
@@ -75,19 +85,23 @@ $settings = $settingModel->getMultiple([
     'contact_email',
     'contact_phone',
     'contact_address',
+    'notifications_email',
     'business_hours_weekday',
     'business_hours_weekend',
-    'footer_text'
+    'footer_company_description',
+    'footer_copyright_text'
 ]);
 
 // Set defaults if not found
-$site_name = $settings['site_name'] ?? 'Karyalay Portal';
+$site_name = $settings['site_name'] ?? 'SellerPortal';
 $contact_email = $settings['contact_email'] ?? '';
 $contact_phone = $settings['contact_phone'] ?? '';
 $contact_address = $settings['contact_address'] ?? '';
+$notifications_email = $settings['notifications_email'] ?? '';
 $business_hours_weekday = $settings['business_hours_weekday'] ?? 'Monday - Friday: 9:00 AM - 6:00 PM';
 $business_hours_weekend = $settings['business_hours_weekend'] ?? 'Saturday - Sunday: Closed';
-$footer_text = $settings['footer_text'] ?? '';
+$footer_company_description = $settings['footer_company_description'] ?? 'Comprehensive business management system designed to streamline your operations and boost productivity.';
+$footer_copyright_text = $settings['footer_copyright_text'] ?? '';
 
 // Generate CSRF token
 $csrf_token = getCsrfToken();
@@ -103,11 +117,13 @@ include_admin_header('General Settings');
     </div>
 </div>
 
+<?php $base_url = get_app_base_url(); ?>
 <!-- Settings Navigation -->
 <div class="settings-nav">
-    <a href="/karyalayportal/admin/settings/general.php" class="settings-nav-item active">General</a>
-    <a href="/karyalayportal/admin/settings/branding.php" class="settings-nav-item">Branding</a>
-    <a href="/karyalayportal/admin/settings/seo.php" class="settings-nav-item">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/general.php" class="settings-nav-item active">General</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/branding.php" class="settings-nav-item">Branding</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/seo.php" class="settings-nav-item">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/legal-identity.php" class="settings-nav-item">Legal Identity</a>
 </div>
 
 <!-- Success/Error Messages -->
@@ -125,7 +141,7 @@ include_admin_header('General Settings');
 
 <!-- General Settings Form -->
 <div class="admin-card">
-    <form method="POST" action="/admin/settings/general.php" class="admin-form">
+    <form method="POST" action="<?php echo $base_url; ?>/admin/settings/general.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -168,18 +184,31 @@ include_admin_header('General Settings');
             </div>
             
             <div class="form-group">
-                <label for="contact_phone" class="form-label">
+                <label for="contact_phone-input" class="form-label">
                     Contact Phone
                 </label>
-                <input 
-                    type="tel" 
-                    id="contact_phone" 
-                    name="contact_phone" 
-                    class="form-input" 
-                    value="<?php echo htmlspecialchars($contact_phone); ?>"
-                    maxlength="50"
-                >
+                <?php echo render_phone_input([
+                    'id' => 'contact_phone',
+                    'name' => 'contact_phone',
+                    'value' => $contact_phone,
+                    'required' => false,
+                ]); ?>
                 <p class="form-help">Phone number displayed on the contact page</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="notifications_email" class="form-label">
+                    Notifications Email
+                </label>
+                <input 
+                    type="email" 
+                    id="notifications_email" 
+                    name="notifications_email" 
+                    class="form-input" 
+                    value="<?php echo htmlspecialchars($notifications_email); ?>"
+                    maxlength="255"
+                >
+                <p class="form-help">Email address to receive lead notifications (defaults to contact email if not set)</p>
             </div>
             
             <div class="form-group">
@@ -234,20 +263,37 @@ include_admin_header('General Settings');
         </div>
         
         <div class="form-section">
-            <h3 class="form-section-title">Footer</h3>
+            <h3 class="form-section-title">Footer Content</h3>
             
             <div class="form-group">
-                <label for="footer_text" class="form-label">
-                    Footer Text
+                <label for="footer_company_description" class="form-label">
+                    Company Description
                 </label>
                 <textarea 
-                    id="footer_text" 
-                    name="footer_text" 
+                    id="footer_company_description" 
+                    name="footer_company_description" 
                     class="form-textarea" 
                     rows="3"
                     maxlength="500"
-                ><?php echo htmlspecialchars($footer_text); ?></textarea>
-                <p class="form-help">Copyright and legal text displayed in the site footer</p>
+                    placeholder="Comprehensive business management system designed to streamline your operations and boost productivity."
+                ><?php echo htmlspecialchars($footer_company_description); ?></textarea>
+                <p class="form-help">Company description displayed in the footer next to your logo</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="footer_copyright_text" class="form-label">
+                    Copyright Text
+                </label>
+                <input 
+                    type="text" 
+                    id="footer_copyright_text" 
+                    name="footer_copyright_text" 
+                    class="form-input" 
+                    value="<?php echo htmlspecialchars($footer_copyright_text); ?>"
+                    maxlength="200"
+                    placeholder="All rights reserved."
+                >
+                <p class="form-help">Additional copyright text (year and company name are added automatically)</p>
             </div>
         </div>
         
@@ -255,7 +301,7 @@ include_admin_header('General Settings');
             <button type="submit" class="btn btn-primary">
                 Save Settings
             </button>
-            <a href="/karyalayportal/admin/dashboard.php" class="btn btn-secondary">
+            <a href="<?php echo get_app_base_url(); ?>/admin/dashboard.php" class="btn btn-secondary">
                 Cancel
             </a>
         </div>

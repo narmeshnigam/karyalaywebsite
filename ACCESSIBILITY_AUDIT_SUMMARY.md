@@ -1,5 +1,5 @@
 # Accessibility Audit Summary
-## Karyalay Portal System
+## SellerPortal System
 
 **Date:** December 7, 2025  
 **Task:** 43. Perform accessibility audit  
@@ -198,7 +198,7 @@ Actionable guide with:
 
 ## Conclusion
 
-The Karyalay Portal System demonstrates **excellent accessibility implementation** with only minor color contrast adjustments needed for full WCAG 2.1 Level AA compliance.
+The SellerPortal System demonstrates **excellent accessibility implementation** with only minor color contrast adjustments needed for full WCAG 2.1 Level AA compliance.
 
 ### Strengths
 - ✅ Comprehensive ARIA attribute implementation

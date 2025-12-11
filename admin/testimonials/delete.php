@@ -12,15 +12,16 @@ use Karyalay\Models\Testimonial;
 
 startSecureSession();
 require_admin();
+require_permission('testimonials.manage');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . get_base_url() . '/admin/testimonials.php');
+    header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
     exit;
 }
 
 if (!validateCsrfToken()) {
     $_SESSION['admin_error'] = 'Invalid security token.';
-    header('Location: ' . get_base_url() . '/admin/testimonials.php');
+    header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
     exit;
 }
 
@@ -28,7 +29,7 @@ $testimonial_id = $_POST['id'] ?? '';
 
 if (empty($testimonial_id)) {
     $_SESSION['admin_error'] = 'Testimonial ID is required.';
-    header('Location: ' . get_base_url() . '/admin/testimonials.php');
+    header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
     exit;
 }
 
@@ -41,5 +42,5 @@ if ($result) {
     $_SESSION['admin_error'] = 'Failed to delete testimonial.';
 }
 
-header('Location: ' . get_base_url() . '/admin/testimonials.php');
+header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
 exit;

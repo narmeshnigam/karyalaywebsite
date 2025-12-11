@@ -14,8 +14,14 @@ use Karyalay\Services\PlanService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and plans.view permission
 require_admin();
+require_permission('plans.view');
+
+// Prevent caching
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
 // Generate CSRF token for delete forms
 $csrf_token = getCsrfToken();
@@ -60,39 +66,42 @@ try {
     $total_plans = $count_stmt->fetchColumn();
     $total_pages = ceil($total_plans / $per_page);
     
-    // Build query for fetching plans
-    $sql = "SELECT * FROM plans WHERE 1=1";
+    // Build query for fetching plans with active subscription count
+    $sql = "SELECT 
+        p.id, p.name, p.slug, p.description, p.currency, p.billing_period_months, 
+        p.status, p.created_at, p.updated_at, p.number_of_users, 
+        p.allowed_storage_gb, p.mrp, p.discounted_price,
+        COUNT(CASE WHEN s.status = 'ACTIVE' THEN 1 END) as active_subscriptions
+        FROM plans p
+        LEFT JOIN subscriptions s ON p.id = s.plan_id
+        WHERE 1=1";
     $params = [];
     
     if (!empty($status_filter)) {
-        $sql .= " AND status = :status";
+        $sql .= " AND p.status = :status";
         $params[':status'] = $status_filter;
     }
     
     if (!empty($search_query)) {
-        $sql .= " AND (name LIKE :search OR description LIKE :search)";
+        $sql .= " AND (p.name LIKE :search OR p.description LIKE :search)";
         $params[':search'] = '%' . $search_query . '%';
     }
     
-    $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+    $sql .= " GROUP BY p.id, p.name, p.slug, p.description, p.currency, p.billing_period_months, 
+              p.status, p.created_at, p.updated_at, p.number_of_users, p.allowed_storage_gb, p.mrp, p.discounted_price";
+    $sql .= " ORDER BY p.created_at DESC";
     
     $stmt = $db->prepare($sql);
     
+    // Bind parameters
     foreach ($params as $key => $value) {
         $stmt->bindValue($key, $value);
     }
-    $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
     $stmt->execute();
-    $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Decode JSON fields
-    foreach ($plans as &$plan) {
-        if (isset($plan['features']) && is_string($plan['features'])) {
-            $plan['features'] = json_decode($plan['features'], true);
-        }
-    }
+    // Fetch all plans
+    $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
     error_log("Plans list error: " . $e->getMessage());
@@ -103,7 +112,12 @@ try {
 
 // Include admin header
 include_admin_header('Plans');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
@@ -111,8 +125,8 @@ include_admin_header('Plans');
         <p class="admin-page-description">Manage subscription plans and pricing</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/plans/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-plans.php'); ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/plans/new.php" class="btn btn-primary">
             Create New Plan
         </a>
     </div>
@@ -135,7 +149,7 @@ include_admin_header('Plans');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/plans.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/plans.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -159,7 +173,7 @@ include_admin_header('Plans');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/plans.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/plans.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -171,7 +185,7 @@ include_admin_header('Plans');
         render_empty_state(
             'No plans found',
             'Get started by creating your first subscription plan',
-            get_base_url() . '/admin/plans/new.php',
+            get_app_base_url() . '/admin/plans/new.php',
             'Create Plan'
         );
         ?>
@@ -181,78 +195,70 @@ include_admin_header('Plans');
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Slug</th>
-                        <th>Price</th>
-                        <th>Billing Period</th>
+                        <th>Pricing</th>
+                        <th>Duration</th>
+                        <th>Limits</th>
                         <th>Status</th>
-                        <th>Features</th>
-                        <th>Created</th>
+                        <th>Active Users</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($plans as $plan): ?>
-                        <tr>
+                        <?php 
+                        $hasDiscount = !empty($plan['mrp']) && !empty($plan['discounted_price']) && $plan['mrp'] > $plan['discounted_price'];
+                        $effectivePrice = !empty($plan['discounted_price']) ? $plan['discounted_price'] : $plan['mrp'];
+                        $discountPct = $hasDiscount ? round((($plan['mrp'] - $plan['discounted_price']) / $plan['mrp']) * 100) : 0;
+                        ?>
+                        <tr data-plan-id="<?php echo htmlspecialchars($plan['id']); ?>" data-plan-name="<?php echo htmlspecialchars($plan['name']); ?>">
                             <td>
-                                <div class="table-cell-primary">
-                                    <?php echo htmlspecialchars($plan['name']); ?>
-                                </div>
-                                <?php if (!empty($plan['description'])): ?>
-                                    <div class="table-cell-secondary">
-                                        <?php echo htmlspecialchars(substr($plan['description'], 0, 60)); ?>
-                                        <?php echo strlen($plan['description']) > 60 ? '...' : ''; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
-                            <td>
+                                <div class="table-cell-primary"><?php echo htmlspecialchars($plan['name']); ?></div>
                                 <code class="code-inline"><?php echo htmlspecialchars($plan['slug']); ?></code>
                             </td>
                             <td>
+                                <?php if ($hasDiscount): ?>
+                                    <div class="price-with-discount">
+                                        <span class="price-mrp"><?php echo format_price($plan['mrp'], false); ?></span>
+                                        <span class="price-discount-badge">-<?php echo $discountPct; ?>%</span>
+                                    </div>
+                                <?php endif; ?>
                                 <div class="table-cell-primary">
-                                    <?php echo htmlspecialchars($plan['currency'] ?? 'USD'); ?> 
-                                    <?php echo number_format($plan['price'], 2); ?>
+                                    <?php echo format_price($effectivePrice, false); ?>
                                 </div>
                             </td>
                             <td>
                                 <?php 
                                 $months = $plan['billing_period_months'];
-                                if ($months == 1) {
-                                    echo 'Monthly';
-                                } elseif ($months == 12) {
-                                    echo 'Yearly';
-                                } else {
-                                    echo $months . ' months';
-                                }
+                                $durationLabel = match((int)$months) {
+                                    1 => 'Monthly',
+                                    3 => 'Quarterly',
+                                    6 => 'Semi-Annual',
+                                    12 => 'Annual',
+                                    default => $months . ' months'
+                                };
                                 ?>
+                                <span class="duration-badge duration-<?php echo $months; ?>"><?php echo $durationLabel; ?></span>
+                            </td>
+                            <td>
+                                <div class="limits-info">
+                                    <span title="Users"><?php echo !empty($plan['number_of_users']) ? $plan['number_of_users'] . ' users' : '∞ users'; ?></span>
+                                    <span title="Storage"><?php echo !empty($plan['allowed_storage_gb']) ? $plan['allowed_storage_gb'] . ' GB' : '∞ storage'; ?></span>
+                                </div>
                             </td>
                             <td><?php echo get_status_badge($plan['status']); ?></td>
                             <td>
-                                <?php 
-                                $feature_count = is_array($plan['features']) ? count($plan['features']) : 0;
-                                echo $feature_count . ' feature' . ($feature_count !== 1 ? 's' : '');
-                                ?>
+                                <div class="active-users-cell">
+                                    <span class="active-users-count"><?php echo (int)$plan['active_subscriptions']; ?></span>
+                                    <span class="active-users-label">active</span>
+                                </div>
                             </td>
-                            <td><?php echo get_relative_time($plan['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/plans/view.php?id=<?php echo urlencode($plan['id']); ?>" 
-                                       class="btn btn-sm btn-outline"
-                                       title="View plan details">
-                                        View
-                                    </a>
-                                    <a href="<?php echo get_base_url(); ?>/admin/plans/edit.php?id=<?php echo urlencode($plan['id']); ?>" 
-                                       class="btn btn-sm btn-secondary"
-                                       title="Edit plan">
-                                        Edit
-                                    </a>
-                                    <form method="POST" 
-                                          action="<?php echo get_base_url(); ?>/admin/plans/delete.php?id=<?php echo urlencode($plan['id']); ?>" 
-                                          class="delete-form"
-                                          onsubmit="return confirm('Are you sure you want to delete this plan? This action cannot be undone.');">
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/plans/view.php?id=<?php echo urlencode($plan['id']); ?>" class="btn btn-sm btn-outline">View</a>
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/plans/edit.php?id=<?php echo urlencode($plan['id']); ?>" class="btn btn-sm btn-secondary">Edit</a>
+                                    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/plans/delete.php?id=<?php echo urlencode($plan['id']); ?>" class="delete-form" onsubmit="return confirm('Delete this plan?');">
                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete plan">
-                                            Delete
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                     </form>
                                 </div>
                             </td>
@@ -266,7 +272,7 @@ include_admin_header('Plans');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = get_base_url() . '/admin/plans.php';
+                $base_url = get_app_base_url() . '/admin/plans.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);
@@ -442,6 +448,69 @@ include_admin_header('Plans');
     margin: 0;
 }
 
+.price-with-discount {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-bottom: 2px;
+}
+
+.price-mrp {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+    text-decoration: line-through;
+}
+
+.price-discount-badge {
+    font-size: 10px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    font-weight: var(--font-weight-semibold);
+}
+
+.duration-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.duration-1 { background: #dbeafe; color: #1e40af; }
+.duration-3 { background: #fef3c7; color: #92400e; }
+.duration-6 { background: #fce7f3; color: #9d174d; }
+.duration-12 { background: #d1fae5; color: #065f46; }
+
+.limits-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+}
+
+.active-users-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.active-users-count {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+}
+
+.active-users-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 @media (max-width: 768px) {
     .admin-page-header {
         flex-direction: column;
@@ -456,5 +525,50 @@ include_admin_header('Plans');
     }
 }
 </style>
+
+<script>
+// Debug: Log plans data to console
+console.group('Plans Debug Information');
+console.log('Total plans fetched:', <?php echo count($plans); ?>);
+console.log('SQL Query:', <?php echo json_encode($sql ?? 'N/A'); ?>);
+console.log('Plans data:');
+console.log('Plans array:', <?php echo json_encode($plans); ?>);
+<?php foreach ($plans as $index => $plan): ?>
+console.log('Plan <?php echo $index + 1; ?> (index <?php echo $index; ?>):', {
+    id: <?php echo json_encode($plan['id']); ?>,
+    name: <?php echo json_encode($plan['name']); ?>,
+    slug: <?php echo json_encode($plan['slug']); ?>,
+    mrp: <?php echo json_encode($plan['mrp'] ?? null); ?>,
+    discounted_price: <?php echo json_encode($plan['discounted_price'] ?? null); ?>,
+    currency: <?php echo json_encode($plan['currency']); ?>,
+    billing_period_months: <?php echo json_encode($plan['billing_period_months']); ?>,
+    number_of_users: <?php echo json_encode($plan['number_of_users'] ?? null); ?>,
+    allowed_storage_gb: <?php echo json_encode($plan['allowed_storage_gb'] ?? null); ?>,
+    status: <?php echo json_encode($plan['status']); ?>,
+    created_at: <?php echo json_encode($plan['created_at']); ?>
+});
+<?php endforeach; ?>
+console.groupEnd();
+
+// Debug: Check what's actually rendered in the table
+console.group('🔍 Rendered Table Rows');
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('tbody tr[data-plan-id]');
+    console.log('Total rows rendered:', rows.length);
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        console.log(`Row ${index + 1}:`, {
+            planId: row.dataset.planId,
+            planName: row.dataset.planName,
+            nameCell: cells[0]?.textContent.trim(),
+            priceCell: cells[1]?.textContent.trim(),
+            durationCell: cells[2]?.textContent.trim(),
+            limitsCell: cells[3]?.textContent.trim(),
+            statusCell: cells[4]?.textContent.trim()
+        });
+    });
+    console.groupEnd();
+});
+</script>
 
 <?php include_admin_footer(); ?>

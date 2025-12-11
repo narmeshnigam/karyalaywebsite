@@ -15,8 +15,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and content.delete permission
 require_admin();
+require_permission('content.delete');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -32,7 +33,7 @@ $csrfMiddleware = new CsrfMiddleware();
 if (!validateCsrfToken()) {
     $_SESSION['flash_message'] = 'Invalid security token. Please try again.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/features.php');
+    header('Location: ' . get_app_base_url() . '/admin/features.php');
     exit;
 }
 
@@ -42,7 +43,7 @@ $feature_id = $_POST['id'] ?? '';
 if (empty($feature_id)) {
     $_SESSION['flash_message'] = 'Feature ID is required.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/features.php');
+    header('Location: ' . get_app_base_url() . '/admin/features.php');
     exit;
 }
 
@@ -57,5 +58,5 @@ if ($result) {
     $_SESSION['flash_type'] = 'danger';
 }
 
-header('Location: ' . get_base_url() . '/admin/features.php');
+header('Location: ' . get_app_base_url() . '/admin/features.php');
 exit;

@@ -316,7 +316,7 @@ $formData = array_merge([
                     id="smtp_from_name" 
                     class="form-input <?php echo isset($errors['smtp_from_name']) ? 'error' : ''; ?>"
                     value="<?php echo htmlspecialchars($formData['smtp_from_name']); ?>"
-                    placeholder="Karyalay Portal"
+                    placeholder="SellerPortal"
                     required
                     <?php echo ($success || $skipped) ? 'disabled' : ''; ?>
                 >

@@ -1,17 +1,14 @@
 <?php
 
 /**
- * Karyalay Portal System
- * FAQs Page
+ * SellerPortal System
+ * FAQs Page - Dynamic Content
  */
 
-// Load Composer autoloader
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Load configuration
 $config = require __DIR__ . '/../config/app.php';
 
-// Set error reporting based on environment
 if ($config['debug']) {
     error_reporting(E_ALL);
     ini_set('display_errors', '1');
@@ -20,20 +17,18 @@ if ($config['debug']) {
     ini_set('display_errors', '0');
 }
 
-// Load authentication helpers
 require_once __DIR__ . '/../includes/auth_helpers.php';
-
-// Start secure session
 startSecureSession();
-
-// Include template helpers
 require_once __DIR__ . '/../includes/template_helpers.php';
 
-// Set page variables
+use Karyalay\Models\Faq;
+
+$faqModel = new Faq();
+$faqsByCategory = $faqModel->findAllGroupedByCategory();
+
 $page_title = 'Frequently Asked Questions';
 $page_description = 'Find answers to common questions about Karyalay business management system';
 
-// Include header
 include_header($page_title, $page_description);
 ?>
 
@@ -52,195 +47,33 @@ include_header($page_title, $page_description);
 <!-- FAQs Section -->
 <section class="faqs-section">
     <div class="container">
-        <div class="faqs-grid">
-            <!-- General Questions -->
-            <div class="faqs-category">
-                <h2 class="faqs-category-title">General Questions</h2>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>What is Karyalay?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Karyalay is a comprehensive business management system designed to streamline your operations, manage customer relationships, handle subscriptions, and provide excellent support. Our platform brings all your business tools together in one place.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Who can benefit from using Karyalay?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Karyalay is perfect for businesses of all sizes - from startups to enterprises. Whether you're managing a small team or a large organization, our platform scales with your needs and helps you stay organized and efficient.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Is there a free trial available?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes! We offer a demo of our platform. Contact us to schedule a personalized demo where we'll walk you through all the features and show you how Karyalay can benefit your business.</p>
-                    </div>
-                </div>
+        <?php if (empty($faqsByCategory)): ?>
+            <div class="empty-faqs">
+                <p>No FAQs available at the moment. Please check back later.</p>
             </div>
-            
-            <!-- Pricing & Plans -->
-            <div class="faqs-category">
-                <h2 class="faqs-category-title">Pricing & Plans</h2>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>What payment methods do you accept?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>We accept all major credit cards, debit cards, and online payment methods through our secure payment gateway. All transactions are encrypted and secure.</p>
+        <?php else: ?>
+            <div class="faqs-grid">
+                <?php foreach ($faqsByCategory as $category => $faqs): ?>
+                    <div class="faqs-category">
+                        <h2 class="faqs-category-title"><?php echo htmlspecialchars($category); ?></h2>
+                        
+                        <?php foreach ($faqs as $faq): ?>
+                            <div class="faq-item">
+                                <button class="faq-question" aria-expanded="false">
+                                    <span><?php echo htmlspecialchars($faq['question']); ?></span>
+                                    <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <div class="faq-answer">
+                                    <p><?php echo nl2br(htmlspecialchars($faq['answer'])); ?></p>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Can I change my plan later?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Absolutely! You can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle, and we'll prorate any differences.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Do you offer custom plans?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes! If none of our standard plans fit your needs, contact us to discuss a custom solution tailored to your specific requirements and budget.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>What happens if I cancel my subscription?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>You can cancel your subscription at any time. You'll continue to have access until the end of your current billing period. We also provide data export options so you can take your information with you.</p>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
-            
-            <!-- Features & Functionality -->
-            <div class="faqs-category">
-                <h2 class="faqs-category-title">Features & Functionality</h2>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>What features are included in all plans?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>All plans include our core features: customer management, subscription handling, support ticketing, reporting and analytics, and 24/7 customer support. Higher-tier plans offer additional features and increased limits.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Can I integrate Karyalay with other tools?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes! Karyalay offers API access and integrations with popular business tools. Contact our team to discuss specific integration requirements for your business.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Is my data secure?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Absolutely. We use enterprise-grade security measures including SSL encryption, regular backups, and secure data centers. Your data is protected with industry-standard security protocols.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Can I export my data?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes, you can export your data at any time in standard formats like CSV and JSON. We believe your data belongs to you, and we make it easy to access and export whenever you need it.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Support & Training -->
-            <div class="faqs-category">
-                <h2 class="faqs-category-title">Support & Training</h2>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>What kind of support do you offer?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>We offer 24/7 customer support via email and chat. Higher-tier plans include priority support and dedicated account managers. We're here to help you succeed!</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>Do you provide training for new users?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes! We provide comprehensive documentation, video tutorials, and onboarding sessions to help you get started. Our support team is always available to answer questions and provide guidance.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" aria-expanded="false">
-                        <span>How quickly can I get started?</span>
-                        <svg class="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="faq-answer">
-                        <p>You can get started immediately! Sign up, choose your plan, and you'll have instant access to your dashboard. Our intuitive interface makes it easy to start managing your business right away.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -253,7 +86,6 @@ include __DIR__ . '/../templates/cta-form.php';
 ?>
 
 <style>
-/* FAQs Hero */
 .faqs-hero {
     background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%);
     padding: var(--spacing-16) 0;
@@ -264,10 +96,7 @@ include __DIR__ . '/../templates/cta-form.php';
 .faqs-hero::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: 
         radial-gradient(circle at 30% 40%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 70% 70%, rgba(79, 70, 229, 0.08) 0%, transparent 50%);
@@ -297,7 +126,6 @@ include __DIR__ . '/../templates/cta-form.php';
     line-height: 1.6;
 }
 
-/* FAQs Section */
 .faqs-section {
     padding: var(--spacing-16) 0;
     background: var(--color-white);
@@ -326,7 +154,6 @@ include __DIR__ . '/../templates/cta-form.php';
     border-bottom: 3px solid var(--color-primary);
 }
 
-/* FAQ Item */
 .faq-item {
     background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     border-radius: var(--radius-xl);
@@ -362,9 +189,7 @@ include __DIR__ . '/../templates/cta-form.php';
     transition: color 0.3s ease;
 }
 
-.faq-question:hover {
-    color: var(--color-primary);
-}
+.faq-question:hover { color: var(--color-primary); }
 
 .faq-icon {
     width: 24px;
@@ -386,7 +211,7 @@ include __DIR__ . '/../templates/cta-form.php';
 }
 
 .faq-item.active .faq-answer {
-    max-height: 500px;
+    max-height: 1000px;
     padding: 0 var(--spacing-5) var(--spacing-5) var(--spacing-5);
 }
 
@@ -397,40 +222,21 @@ include __DIR__ . '/../templates/cta-form.php';
     margin: 0;
 }
 
-/* Responsive */
+.empty-faqs {
+    text-align: center;
+    padding: var(--spacing-16);
+    color: var(--color-gray-500);
+}
+
 @media (max-width: 768px) {
-    .faqs-grid {
-        gap: var(--spacing-8);
-    }
-    
-    .faqs-hero {
-        padding: var(--spacing-12) 0;
-    }
-    
-    .faqs-hero-title {
-        font-size: var(--font-size-3xl);
-    }
-    
-    .faqs-hero-subtitle {
-        font-size: var(--font-size-base);
-    }
-    
-    .faqs-section {
-        padding: var(--spacing-12) 0;
-    }
-    
-    .faqs-category-title {
-        font-size: var(--font-size-xl);
-    }
-    
-    .faq-question {
-        font-size: var(--font-size-base);
-        padding: var(--spacing-4);
-    }
-    
-    .faq-item.active .faq-answer {
-        padding: 0 var(--spacing-4) var(--spacing-4) var(--spacing-4);
-    }
+    .faqs-grid { gap: var(--spacing-8); }
+    .faqs-hero { padding: var(--spacing-12) 0; }
+    .faqs-hero-title { font-size: var(--font-size-3xl); }
+    .faqs-hero-subtitle { font-size: var(--font-size-base); }
+    .faqs-section { padding: var(--spacing-12) 0; }
+    .faqs-category-title { font-size: var(--font-size-xl); }
+    .faq-question { font-size: var(--font-size-base); padding: var(--spacing-4); }
+    .faq-item.active .faq-answer { padding: 0 var(--spacing-4) var(--spacing-4) var(--spacing-4); }
 }
 </style>
 
@@ -444,7 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
         question.addEventListener('click', function() {
             const isActive = item.classList.contains('active');
             
-            // Close all other items
             faqItems.forEach(otherItem => {
                 if (otherItem !== item) {
                     otherItem.classList.remove('active');
@@ -452,7 +257,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // Toggle current item
             if (isActive) {
                 item.classList.remove('active');
                 question.setAttribute('aria-expanded', 'false');
@@ -465,7 +269,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php
-// Include footer
-include_footer();
-?>
+<?php include_footer(); ?>

@@ -1,6 +1,6 @@
 # Pagination Usage Guide
 
-This document provides examples of how to use the pagination system in the Karyalay Portal System.
+This document provides examples of how to use the pagination system in the SellerPortal System.
 
 ## Overview
 

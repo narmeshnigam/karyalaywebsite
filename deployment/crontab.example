@@ -1,4 +1,4 @@
-# Karyalay Portal System - Cron Jobs
+# SellerPortal System - Cron Jobs
 # Copy this file to /etc/cron.d/karyalay-portal or add to user crontab
 
 # Application monitoring - every 5 minutes

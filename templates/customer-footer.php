@@ -3,16 +3,16 @@
             <!-- Customer Portal Footer -->
             <footer class="customer-portal-footer">
                 <div class="customer-portal-footer-content">
-                    <p class="customer-portal-footer-text">
-                        &copy; <?php echo date('Y'); ?> Karyalay. All rights reserved.
-                    </p>
                     <?php
-                    // Load template helpers for get_base_url()
+                    // Load template helpers for get_base_url() and get_brand_name()
                     if (!function_exists('get_base_url')) {
                         require_once __DIR__ . '/../includes/template_helpers.php';
                     }
                     $base_url = get_base_url();
                     ?>
+                    <p class="customer-portal-footer-text">
+                        &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(get_brand_name()); ?>. All rights reserved.
+                    </p>
                     <div class="customer-portal-footer-links">
                         <a href="<?php echo $base_url; ?>/support.php" class="customer-portal-footer-link">Help Center</a>
                         <a href="<?php echo $base_url; ?>/privacy.php" class="customer-portal-footer-link">Privacy</a>

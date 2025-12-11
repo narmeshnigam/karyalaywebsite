@@ -1,6 +1,6 @@
 # Database Optimization Guide
 
-This document describes the database optimization techniques implemented in the Karyalay Portal System.
+This document describes the database optimization techniques implemented in the SellerPortal System.
 
 ## Overview
 

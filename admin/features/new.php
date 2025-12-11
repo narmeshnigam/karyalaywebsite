@@ -16,8 +16,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and content.create permission
 require_admin();
+require_permission('content.create');
 
 // Initialize services
 $contentService = new ContentService();
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Feature created successfully!';
-                header('Location: ' . get_base_url() . '/admin/features.php');
+                header('Location: ' . get_app_base_url() . '/admin/features.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create feature. Please check if the slug is unique.';
@@ -111,7 +112,7 @@ include_admin_header('Create Feature');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/features.php">Features</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/features.php">Features</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Feature</span>
         </nav>
@@ -119,7 +120,7 @@ include_admin_header('Create Feature');
         <p class="admin-page-description">Add a new feature to display on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/features.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/features.php" class="btn btn-secondary">
             ← Back to Features
         </a>
     </div>
@@ -136,7 +137,7 @@ include_admin_header('Create Feature');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/features/new.php" class="admin-form">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/features/new.php" class="admin-form">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     
     <div class="admin-card">
@@ -285,7 +286,7 @@ include_admin_header('Create Feature');
     
     <div class="admin-form-actions">
         <button type="submit" class="btn btn-primary">Create Feature</button>
-        <a href="<?php echo get_base_url(); ?>/admin/features.php" class="btn btn-secondary">Cancel</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/features.php" class="btn btn-secondary">Cancel</a>
     </div>
 </form>
 

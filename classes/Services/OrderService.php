@@ -46,11 +46,16 @@ class OrderService
                 return false;
             }
             
+            // Calculate effective price: discounted_price if available, otherwise mrp
+            $effectivePrice = !empty($plan['discounted_price']) && $plan['discounted_price'] > 0 
+                ? $plan['discounted_price'] 
+                : $plan['mrp'];
+            
             // Create order with PENDING status
             $orderData = [
                 'customer_id' => $customerId,
                 'plan_id' => $planId,
-                'amount' => $plan['price'],
+                'amount' => $effectivePrice,
                 'currency' => $plan['currency'],
                 'status' => 'PENDING',
                 'payment_method' => $paymentMethod
@@ -115,14 +120,34 @@ class OrderService
     }
 
     /**
-     * Get order by payment gateway ID
+     * Get order by payment gateway order ID
      * 
-     * @param string $paymentGatewayId Payment gateway ID
+     * @param string $pgOrderId Payment gateway order ID
      * @return array|false Order data or false if not found
+     */
+    public function getOrderByPgOrderId(string $pgOrderId)
+    {
+        return $this->orderModel->findByPgOrderId($pgOrderId);
+    }
+
+    /**
+     * Get order by payment gateway payment ID
+     * 
+     * @param string $pgPaymentId Payment gateway payment ID
+     * @return array|false Order data or false if not found
+     */
+    public function getOrderByPgPaymentId(string $pgPaymentId)
+    {
+        return $this->orderModel->findByPgPaymentId($pgPaymentId);
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use getOrderByPgOrderId() instead
      */
     public function getOrderByPaymentGatewayId(string $paymentGatewayId)
     {
-        return $this->orderModel->findByPaymentGatewayId($paymentGatewayId);
+        return $this->orderModel->findByPgOrderId($paymentGatewayId);
     }
 
     /**
@@ -152,22 +177,50 @@ class OrderService
     }
 
     /**
-     * Update order with payment gateway ID
+     * Update order with payment gateway order ID
      * 
      * @param string $orderId Order ID
-     * @param string $paymentGatewayId Payment gateway ID
+     * @param string $pgOrderId Payment gateway order ID
      * @return bool True on success, false on failure
      */
-    public function updatePaymentGatewayId(string $orderId, string $paymentGatewayId): bool
+    public function updatePgOrderId(string $orderId, string $pgOrderId): bool
     {
         try {
             return $this->orderModel->update($orderId, [
-                'payment_gateway_id' => $paymentGatewayId
+                'pg_order_id' => $pgOrderId
             ]);
         } catch (Exception $e) {
-            error_log('Update payment gateway ID error: ' . $e->getMessage());
+            error_log('Update PG order ID error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Update order with payment gateway payment ID
+     * 
+     * @param string $orderId Order ID
+     * @param string $pgPaymentId Payment gateway payment ID
+     * @return bool True on success, false on failure
+     */
+    public function updatePgPaymentId(string $orderId, string $pgPaymentId): bool
+    {
+        try {
+            return $this->orderModel->update($orderId, [
+                'pg_payment_id' => $pgPaymentId
+            ]);
+        } catch (Exception $e) {
+            error_log('Update PG payment ID error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use updatePgOrderId() instead
+     */
+    public function updatePaymentGatewayId(string $orderId, string $paymentGatewayId): bool
+    {
+        return $this->updatePgOrderId($orderId, $paymentGatewayId);
     }
 
     /**

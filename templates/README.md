@@ -1,6 +1,6 @@
 # Karyalay Template System
 
-This directory contains the reusable template components for the Karyalay Portal System.
+This directory contains the reusable template components for the SellerPortal System.
 
 ## Overview
 

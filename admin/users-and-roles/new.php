@@ -1,6 +1,7 @@
 <?php
 /**
  * Create New Admin User Page
+ * Supports multiple roles per user
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
@@ -9,12 +10,17 @@ require_once __DIR__ . '/../../includes/admin_helpers.php';
 require_once __DIR__ . '/../../includes/template_helpers.php';
 
 use Karyalay\Models\User;
+use Karyalay\Services\RoleService;
 
 startSecureSession();
 require_admin();
+require_permission('users.create');
 
 $db = \Karyalay\Database\Connection::getInstance();
 $userModel = new User();
+
+// Get all available roles
+$allRoles = RoleService::getRoles();
 
 // Generate CSRF token
 if (!isset($_SESSION['csrf_token'])) {
@@ -29,7 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
-        $role = $_POST['role'] ?? 'ADMIN';
+        $selectedRoles = $_POST['roles'] ?? [];
+        
+        // Ensure roles is an array
+        if (!is_array($selectedRoles)) {
+            $selectedRoles = [$selectedRoles];
+        }
+        
+        // Filter to only valid roles
+        $selectedRoles = array_filter($selectedRoles, function($role) use ($allRoles) {
+            return isset($allRoles[$role]);
+        });
         
         if (empty($name) || empty($email) || empty($password)) {
             $_SESSION['admin_error'] = 'Name, email, and password are required.';
@@ -37,42 +53,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_error'] = 'Invalid email format.';
         } elseif (strlen($password) < 8) {
             $_SESSION['admin_error'] = 'Password must be at least 8 characters.';
-        } elseif (!in_array($role, ['ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'])) {
-            $_SESSION['admin_error'] = 'Invalid role selected.';
+        } elseif (empty($selectedRoles)) {
+            $_SESSION['admin_error'] = 'At least one role must be selected.';
         } elseif ($userModel->emailExists($email)) {
             $_SESSION['admin_error'] = 'Email already exists.';
         } else {
+            // Determine primary role (first non-CUSTOMER role)
+            $primaryRole = 'CUSTOMER';
+            foreach ($selectedRoles as $role) {
+                if ($role !== 'CUSTOMER') {
+                    $primaryRole = $role;
+                    break;
+                }
+            }
+            
             $result = $userModel->create([
                 'email' => $email,
                 'password' => $password,
                 'name' => $name,
-                'role' => $role,
+                'phone' => null,
+                'role' => $primaryRole,
                 'email_verified' => true
             ]);
             
             if ($result) {
-                $_SESSION['admin_success'] = 'Admin user created successfully!';
-                header('Location: ' . get_base_url() . '/admin/users-and-roles.php');
+                // Set roles in user_roles table
+                RoleService::setUserRoles($result['id'], $selectedRoles, $_SESSION['user_id']);
+                
+                $_SESSION['admin_success'] = 'User created successfully!';
+                header('Location: ' . get_app_base_url() . '/admin/users-and-roles.php');
                 exit;
             } else {
-                $_SESSION['admin_error'] = 'Failed to create admin user. Please try again.';
+                $_SESSION['admin_error'] = 'Failed to create user. Please try again.';
             }
         }
     }
 }
 
-include_admin_header('Create Admin User');
+include_admin_header('Create User');
 ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/users-and-roles.php">Users & Roles</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php">Users & Roles</a>
             <span class="breadcrumb-separator">/</span>
-            <span>Create Admin User</span>
+            <span>Create User</span>
         </nav>
-        <h1 class="admin-page-title">Create Admin User</h1>
-        <p class="admin-page-description">Add a new administrator to the system</p>
+        <h1 class="admin-page-title">Create User</h1>
+        <p class="admin-page-description">Add a new user with admin panel access</p>
     </div>
 </div>
 
@@ -84,7 +113,7 @@ include_admin_header('Create Admin User');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/users-and-roles/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/users-and-roles/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
         
         <div class="form-row">
@@ -107,36 +136,37 @@ include_admin_header('Create Admin User');
                 <input type="password" id="password" name="password" class="form-input" required minlength="8">
                 <p class="form-help">Minimum 8 characters</p>
             </div>
-            
-            <div class="form-group">
-                <label for="role" class="form-label">Role <span class="required">*</span></label>
-                <select id="role" name="role" class="form-input" required>
-                    <option value="ADMIN" <?php echo ($_POST['role'] ?? '') === 'ADMIN' ? 'selected' : ''; ?>>Admin</option>
-                    <option value="SUPPORT" <?php echo ($_POST['role'] ?? '') === 'SUPPORT' ? 'selected' : ''; ?>>Support</option>
-                    <option value="SALES" <?php echo ($_POST['role'] ?? '') === 'SALES' ? 'selected' : ''; ?>>Sales</option>
-                    <option value="CONTENT_EDITOR" <?php echo ($_POST['role'] ?? '') === 'CONTENT_EDITOR' ? 'selected' : ''; ?>>Content Editor</option>
-                </select>
-            </div>
         </div>
         
-        <div class="role-permissions-card">
-            <h3>Role Permissions</h3>
-            <div class="role-permission" data-role="ADMIN">
-                <strong>Admin:</strong> Full system access including user management, settings, and all administrative functions.
-            </div>
-            <div class="role-permission" data-role="SUPPORT">
-                <strong>Support:</strong> Access to tickets, customer support features, and customer information.
-            </div>
-            <div class="role-permission" data-role="SALES">
-                <strong>Sales:</strong> Access to leads, customers, orders, and sales-related features.
-            </div>
-            <div class="role-permission" data-role="CONTENT_EDITOR">
-                <strong>Content Editor:</strong> Access to content management including blog, solutions, and features.
+        <div class="form-group">
+            <label class="form-label">Roles <span class="required">*</span></label>
+            <p class="form-help" style="margin-bottom: 12px;">Select one or more roles. All users automatically have the CUSTOMER role.</p>
+            
+            <div class="roles-grid">
+                <?php 
+                $postedRoles = $_POST['roles'] ?? [];
+                foreach ($allRoles as $roleName => $roleData): 
+                ?>
+                    <?php if ($roleName === 'CUSTOMER') continue; // Skip CUSTOMER as it's automatic ?>
+                    <div class="role-checkbox-card <?php echo in_array($roleName, $postedRoles) ? 'selected' : ''; ?>">
+                        <label class="role-checkbox-label">
+                            <input type="checkbox" name="roles[]" value="<?php echo htmlspecialchars($roleName); ?>"
+                                <?php echo in_array($roleName, $postedRoles) ? 'checked' : ''; ?>>
+                            <div class="role-checkbox-content">
+                                <div class="role-checkbox-header">
+                                    <span class="role-checkbox-name"><?php echo htmlspecialchars($roleData['label']); ?></span>
+                                    <?php echo get_role_badge($roleName); ?>
+                                </div>
+                                <p class="role-checkbox-desc"><?php echo htmlspecialchars($roleData['description']); ?></p>
+                            </div>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
         
         <div class="form-actions">
-            <a href="<?php echo get_base_url(); ?>/admin/users-and-roles.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php" class="btn btn-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">Create User</button>
         </div>
     </form>
@@ -172,6 +202,7 @@ include_admin_header('Create Admin User');
 .form-group {
     display: flex;
     flex-direction: column;
+    margin-bottom: 20px;
 }
 .form-label {
     font-weight: 600;
@@ -197,32 +228,68 @@ include_admin_header('Create Admin User');
     color: var(--color-gray-500);
     margin-top: 4px;
 }
-.role-permissions-card {
-    background: var(--color-gray-50);
-    border: 1px solid var(--color-gray-200);
+
+/* Roles Grid */
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.role-checkbox-card {
+    border: 2px solid var(--color-gray-200);
     border-radius: 8px;
     padding: 16px;
-    margin-bottom: 24px;
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
-.role-permissions-card h3 {
-    font-size: 14px;
+
+.role-checkbox-card:hover {
+    border-color: var(--color-gray-300);
+    background: var(--color-gray-50);
+}
+
+.role-checkbox-card.selected {
+    border-color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.role-checkbox-label {
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.role-checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.role-checkbox-content {
+    flex: 1;
+}
+
+.role-checkbox-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.role-checkbox-name {
     font-weight: 600;
-    margin: 0 0 12px 0;
-    color: var(--color-gray-700);
+    color: var(--color-gray-900);
 }
-.role-permission {
+
+.role-checkbox-desc {
     font-size: 13px;
     color: var(--color-gray-600);
-    padding: 8px 0;
-    border-bottom: 1px solid var(--color-gray-200);
-    display: none;
+    margin: 0;
+    line-height: 1.4;
 }
-.role-permission:last-child {
-    border-bottom: none;
-}
-.role-permission.active {
-    display: block;
-}
+
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -230,8 +297,17 @@ include_admin_header('Create Admin User');
     padding-top: 16px;
     border-top: 1px solid var(--color-gray-200);
 }
+
+/* Badge colors */
+.badge-purple { background-color: #8b5cf6; color: white; }
+.badge-teal { background-color: #14b8a6; color: white; }
+.badge-orange { background-color: #f97316; color: white; }
+
 @media (max-width: 768px) {
     .form-row {
+        grid-template-columns: 1fr;
+    }
+    .roles-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -239,17 +315,12 @@ include_admin_header('Create Admin User');
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const roleSelect = document.getElementById('role');
-    
-    function updateRolePermissions() {
-        const selectedRole = roleSelect.value;
-        document.querySelectorAll('.role-permission').forEach(el => {
-            el.classList.toggle('active', el.dataset.role === selectedRole);
+    // Update card selection state when checkbox changes
+    document.querySelectorAll('.role-checkbox-card input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            this.closest('.role-checkbox-card').classList.toggle('selected', this.checked);
         });
-    }
-    
-    roleSelect.addEventListener('change', updateRolePermissions);
-    updateRolePermissions();
+    });
 });
 </script>
 

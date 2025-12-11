@@ -1,6 +1,6 @@
 # Performance Testing Guide
 
-This guide explains how to run and interpret performance tests for the Karyalay Portal System.
+This guide explains how to run and interpret performance tests for the SellerPortal System.
 
 ## Quick Start
 

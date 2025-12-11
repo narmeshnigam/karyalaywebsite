@@ -10,21 +10,17 @@ require_once __DIR__ . '/../../includes/template_helpers.php';
 
 use Karyalay\Services\PortService;
 use Karyalay\Services\CsrfService;
-use Karyalay\Models\Plan;
 
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and ports.create permission
 require_admin();
+require_permission('ports.create');
 
 // Initialize services
 $portService = new PortService();
 $csrfService = new CsrfService();
-$planModel = new Plan();
-
-// Fetch all plans for dropdown
-$allPlans = $planModel->findAll();
 
 // Initialize variables
 $errors = [];
@@ -35,10 +31,10 @@ $formData = [
     'db_name' => '',
     'db_username' => '',
     'db_password' => '',
-    'plan_id' => '',
     'status' => 'AVAILABLE',
     'server_region' => '',
-    'notes' => ''
+    'notes' => '',
+    'setup_instructions' => ''
 ];
 
 // Handle form submission
@@ -54,25 +50,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'db_name' => trim($_POST['db_name'] ?? ''),
             'db_username' => trim($_POST['db_username'] ?? ''),
             'db_password' => trim($_POST['db_password'] ?? ''),
-            'plan_id' => trim($_POST['plan_id'] ?? ''),
             'status' => trim($_POST['status'] ?? 'AVAILABLE'),
             'server_region' => trim($_POST['server_region'] ?? ''),
-            'notes' => trim($_POST['notes'] ?? '')
+            'notes' => trim($_POST['notes'] ?? ''),
+            'setup_instructions' => $_POST['setup_instructions'] ?? ''
         ];
 
         // Validate required fields
         if (empty($formData['instance_url'])) {
             $errors[] = 'Instance URL is required.';
         }
-        if (empty($formData['plan_id'])) {
-            $errors[] = 'Plan is required.';
-        }
 
         if (empty($errors)) {
             // Prepare data for creation
             $portData = [
                 'instance_url' => $formData['instance_url'],
-                'plan_id' => $formData['plan_id'],
                 'status' => $formData['status']
             ];
 
@@ -96,21 +88,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($formData['notes'])) {
                 $portData['notes'] = $formData['notes'];
             }
+            if (!empty($formData['setup_instructions'])) {
+                $portData['setup_instructions'] = $formData['setup_instructions'];
+            }
 
+            // Add creator info for logging
+            $portData['created_by'] = $_SESSION['user_id'] ?? null;
+            
             // Create port
             $result = $portService->createPort($portData);
+
+            // Debug: Log the result for troubleshooting
+            error_log('Port creation attempt - Data: ' . json_encode($portData));
+            error_log('Port creation result: ' . json_encode($result));
 
             if ($result['success']) {
                 $success = true;
                 $_SESSION['admin_success'] = 'Port created successfully!';
-                header('Location: ' . get_base_url() . '/admin/ports.php');
+                header('Location: ' . get_app_base_url() . '/admin/ports.php');
                 exit;
             } else {
-                $errors[] = $result['error'] ?? 'Failed to create port. Please check the form and try again.';
+                // Add detailed error information
+                $errorMsg = $result['error'] ?? 'Failed to create port';
+                if (isset($result['error_code'])) {
+                    $errorMsg .= ' (Code: ' . $result['error_code'] . ')';
+                }
+                $errors[] = $errorMsg;
+                
+                // Debug: Store debug info for display
+                $debugInfo = [
+                    'portData' => $portData,
+                    'result' => $result
+                ];
             }
         }
     }
 }
+
+// Debug variable for template
+$showDebug = true; // Set to false in production
 
 // Generate CSRF token
 $csrfToken = $csrfService->generateToken();
@@ -125,7 +141,7 @@ include_admin_header('Add Port');
         <p class="admin-page-description">Add a single port to the pool</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-secondary">
             ← Back to Ports
         </a>
     </div>
@@ -140,10 +156,22 @@ include_admin_header('Add Port');
             <?php endforeach; ?>
         </ul>
     </div>
+    
+    <?php if (isset($showDebug) && $showDebug && isset($debugInfo)): ?>
+    <div class="alert" style="background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; margin-bottom: 1rem;">
+        <strong>Debug Information:</strong>
+        <pre style="margin-top: 0.5rem; font-size: 12px; overflow-x: auto;"><?php 
+            echo "Port Data Sent:\n";
+            echo htmlspecialchars(json_encode($debugInfo['portData'] ?? [], JSON_PRETTY_PRINT));
+            echo "\n\nService Response:\n";
+            echo htmlspecialchars(json_encode($debugInfo['result'] ?? [], JSON_PRETTY_PRINT));
+        ?></pre>
+    </div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/ports/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/ports/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
         
         <div class="form-section">
@@ -236,30 +264,19 @@ include_admin_header('Add Port');
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="plan_id" class="form-label required">Associated Plan</label>
-                    <select id="plan_id" name="plan_id" class="form-select" required>
-                        <option value="">Select a plan...</option>
-                        <?php foreach ($allPlans as $plan): ?>
-                            <option value="<?php echo htmlspecialchars($plan['id']); ?>"
-                                    <?php echo $formData['plan_id'] === $plan['id'] ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($plan['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <p class="form-help">The subscription plan this port is designated for</p>
-                </div>
+        </div>
 
-                <div class="form-group">
-                    <label for="status" class="form-label required">Status</label>
-                    <select id="status" name="status" class="form-select" required>
-                        <option value="AVAILABLE" <?php echo $formData['status'] === 'AVAILABLE' ? 'selected' : ''; ?>>Available</option>
-                        <option value="RESERVED" <?php echo $formData['status'] === 'RESERVED' ? 'selected' : ''; ?>>Reserved</option>
-                        <option value="DISABLED" <?php echo $formData['status'] === 'DISABLED' ? 'selected' : ''; ?>>Disabled</option>
-                    </select>
-                    <p class="form-help">Initial status of the port (typically Available)</p>
-                </div>
+        <div class="form-section">
+            <h2 class="form-section-title">Port Status</h2>
+            
+            <div class="form-group">
+                <label for="status" class="form-label required">Status</label>
+                <select id="status" name="status" class="form-select" required>
+                    <option value="AVAILABLE" <?php echo $formData['status'] === 'AVAILABLE' ? 'selected' : ''; ?>>Available</option>
+                    <option value="RESERVED" <?php echo $formData['status'] === 'RESERVED' ? 'selected' : ''; ?>>Reserved</option>
+                    <option value="DISABLED" <?php echo $formData['status'] === 'DISABLED' ? 'selected' : ''; ?>>Disabled</option>
+                </select>
+                <p class="form-help">Initial status of the port (typically Available)</p>
             </div>
 
             <div class="form-group">
@@ -275,9 +292,21 @@ include_admin_header('Add Port');
             </div>
         </div>
 
+        <div class="form-section">
+            <h2 class="form-section-title">Setup Instructions</h2>
+            <p class="form-section-description">Provide setup instructions that will be shown to the customer on their "My Port" page.</p>
+            
+            <div class="form-group">
+                <label for="setup_instructions" class="form-label">Setup Instructions (Rich Text)</label>
+                <div id="setup_instructions_editor" class="rich-text-editor"><?php echo $formData['setup_instructions']; ?></div>
+                <input type="hidden" name="setup_instructions" id="setup_instructions_input" value="<?php echo htmlspecialchars($formData['setup_instructions']); ?>">
+                <p class="form-help">These instructions will be displayed to the customer. You can use formatting, lists, and links.</p>
+            </div>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Add Port</button>
-            <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
@@ -419,6 +448,80 @@ include_admin_header('Add Port');
         grid-template-columns: 1fr;
     }
 }
+
+/* Rich Text Editor */
+.rich-text-editor {
+    min-height: 250px;
+    background: white;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+}
+
+.form-section-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+    margin: -0.5rem 0 1rem 0;
+}
+
+.ql-toolbar {
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border-color: var(--color-gray-300) !important;
+}
+
+.ql-container {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    border-color: var(--color-gray-300) !important;
+    font-size: var(--font-size-base);
+}
+
+.ql-editor {
+    min-height: 200px;
+}
 </style>
+
+<!-- Quill Editor CSS -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
+<!-- Quill Editor JS -->
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if editor element exists
+    var editorElement = document.getElementById('setup_instructions_editor');
+    if (!editorElement) {
+        console.warn('Setup instructions editor element not found');
+        return;
+    }
+
+    // Initialize Quill editor
+    var quill = new Quill('#setup_instructions_editor', {
+        theme: 'snow',
+        placeholder: 'Enter setup instructions for the customer...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'indent': '-1'}, { 'indent': '+1' }],
+                ['link', 'code-block'],
+                ['clean']
+            ]
+        }
+    });
+
+    // Update hidden input on form submit
+    var form = document.querySelector('.admin-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var hiddenInput = document.getElementById('setup_instructions_input');
+            if (hiddenInput && quill) {
+                hiddenInput.value = quill.root.innerHTML;
+            }
+        });
+    }
+});
+</script>
 
 <?php include_admin_footer(); ?>

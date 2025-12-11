@@ -15,8 +15,9 @@ use Karyalay\Services\MediaUploadService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and settings.general permission (ADMIN only)
 require_admin();
+require_permission('settings.general');
 
 // Initialize services
 $settingModel = new Setting();
@@ -29,7 +30,7 @@ $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate CSRF token
-    if (!$csrfMiddleware->validateToken($_POST['csrf_token'] ?? '')) {
+    if (!$csrfMiddleware->validate()) {
         $error_message = 'Invalid security token. Please try again.';
     } else {
         try {
@@ -107,11 +108,13 @@ include_admin_header('SEO Settings');
     </div>
 </div>
 
+<?php $base_url = get_app_base_url(); ?>
 <!-- Settings Navigation -->
 <div class="settings-nav">
-    <a href="/karyalayportal/admin/settings/general.php" class="settings-nav-item">General</a>
-    <a href="/karyalayportal/admin/settings/branding.php" class="settings-nav-item">Branding</a>
-    <a href="/karyalayportal/admin/settings/seo.php" class="settings-nav-item active">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/general.php" class="settings-nav-item">General</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/branding.php" class="settings-nav-item">Branding</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/seo.php" class="settings-nav-item active">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/legal-identity.php" class="settings-nav-item">Legal Identity</a>
 </div>
 
 <!-- Success/Error Messages -->
@@ -129,7 +132,7 @@ include_admin_header('SEO Settings');
 
 <!-- SEO Settings Form -->
 <div class="admin-card">
-    <form method="POST" action="/admin/settings/seo.php" enctype="multipart/form-data" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/settings/seo.php" enctype="multipart/form-data" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -260,7 +263,7 @@ include_admin_header('SEO Settings');
             <button type="submit" class="btn btn-primary">
                 Save Settings
             </button>
-            <a href="/karyalayportal/admin/dashboard.php" class="btn btn-secondary">
+            <a href="<?php echo get_app_base_url(); ?>/admin/dashboard.php" class="btn btn-secondary">
                 Cancel
             </a>
         </div>

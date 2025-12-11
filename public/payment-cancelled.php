@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Payment Cancelled Page
  */
 
@@ -28,7 +28,7 @@ startSecureSession();
 
 // Check if user is logged in
 if (!isLoggedIn()) {
-    header('Location: /karyalayportal/login.php');
+    header('Location: ' . get_base_url() . '/login.php');
     exit;
 }
 
@@ -66,10 +66,10 @@ include_header($page_title, $page_description);
             </div>
             
             <div class="flex gap-4 justify-center">
-                <a href="/karyalayportal/checkout.php" class="btn btn-primary btn-lg">
+                <a href="<?php echo get_base_url(); ?>/checkout.php" class="btn btn-primary btn-lg">
                     Complete Purchase
                 </a>
-                <a href="/karyalayportal/pricing.php" class="btn btn-outline btn-lg">
+                <a href="<?php echo get_base_url(); ?>/pricing.php" class="btn btn-outline btn-lg">
                     View Plans
                 </a>
             </div>

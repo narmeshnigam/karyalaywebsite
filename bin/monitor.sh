@@ -136,7 +136,7 @@ check_memory() {
 # Main monitoring function
 main() {
     echo "========================================="
-    echo "Karyalay Portal - Health Monitoring"
+    echo "SellerPortal - Health Monitoring"
     echo "========================================="
     echo "Time: $TIMESTAMP"
     echo "URL: $APP_URL"

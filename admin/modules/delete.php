@@ -15,8 +15,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and solutions.manage permission
 require_admin();
+require_permission('solutions.manage');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -32,7 +33,7 @@ $csrfMiddleware = new CsrfMiddleware();
 if (!validateCsrfToken()) {
     $_SESSION['flash_message'] = 'Invalid security token. Please try again.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/modules.php');
+    header('Location: ' . get_app_base_url() . '/admin/modules.php');
     exit;
 }
 
@@ -42,7 +43,7 @@ $module_id = $_POST['id'] ?? '';
 if (empty($module_id)) {
     $_SESSION['flash_message'] = 'Module ID is required.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/modules.php');
+    header('Location: ' . get_app_base_url() . '/admin/modules.php');
     exit;
 }
 
@@ -57,5 +58,5 @@ if ($result) {
     $_SESSION['flash_type'] = 'danger';
 }
 
-header('Location: ' . get_base_url() . '/admin/modules.php');
+header('Location: ' . get_app_base_url() . '/admin/modules.php');
 exit;

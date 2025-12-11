@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Payment Webhook Handler
  * 
  * Handles payment confirmation webhooks from Razorpay
@@ -137,70 +137,148 @@ function handlePaymentSuccess(array $paymentEntity): void
  */
 function handleNewSubscriptionPayment(array $order): void
 {
-    $subscriptionModel = new Subscription();
-    $portModel = new Port();
+    // Use SubscriptionService for consistent handling
+    $subscriptionService = new \Karyalay\Services\SubscriptionService();
     
-    // Create subscription
-    $subscriptionData = [
-        'customer_id' => $order['customer_id'],
-        'plan_id' => $order['plan_id'],
-        'order_id' => $order['id'],
-        'status' => 'ACTIVE'
-    ];
+    $result = $subscriptionService->processSuccessfulPayment($order['id']);
     
-    $subscription = $subscriptionModel->create($subscriptionData);
-    
-    if (!$subscription) {
-        error_log('Failed to create subscription for order: ' . $order['id']);
+    if (!$result['success']) {
+        error_log('Webhook: Failed to process subscription for order: ' . $order['id'] . ' - ' . ($result['error'] ?? 'Unknown error'));
         return;
     }
     
-    error_log('Subscription created: ' . $subscription['id']);
+    // Check if this was already processed (idempotency)
+    if (isset($result['already_processed']) && $result['already_processed']) {
+        error_log('Webhook: Order already processed: ' . $order['id']);
+        return;
+    }
     
-    // Allocate port
-    $availablePort = $portModel->findAvailableForPlan($order['plan_id']);
+    error_log('Webhook: Subscription created: ' . $result['subscription']['id']);
     
-    if ($availablePort) {
-        // Assign port to subscription
-        $portModel->assignToSubscription(
-            $availablePort['id'],
-            $subscription['id'],
-            $order['customer_id'],
-            date('Y-m-d H:i:s')
-        );
-        
-        // Update subscription with assigned port
-        $subscriptionModel->update($subscription['id'], [
-            'assigned_port_id' => $availablePort['id']
-        ]);
-        
-        error_log('Port allocated: ' . $availablePort['id'] . ' to subscription: ' . $subscription['id']);
+    if ($result['port_allocated']) {
+        error_log('Webhook: Port allocated to subscription: ' . $result['subscription']['id']);
     } else {
-        // No available ports - mark subscription as pending allocation
-        $subscriptionModel->updateStatus($subscription['id'], 'PENDING_ALLOCATION');
-        error_log('No available ports for plan: ' . $order['plan_id']);
+        error_log('Webhook: Port not allocated - ' . ($result['port_message'] ?? 'No available ports'));
         
-        // Send notification to admin
+        // Send notification to admin about pending port allocation
         try {
             $emailService = new EmailService();
             $config = require __DIR__ . '/../config/app.php';
-            $emailService->sendEmail(
-                $config['admin_email'],
-                'Port Allocation Required',
-                "Subscription {$subscription['id']} requires port allocation. No available ports for plan {$order['plan_id']}."
-            );
+            if (!empty($config['admin_email'])) {
+                $emailService->sendEmail(
+                    $config['admin_email'],
+                    'Port Allocation Required',
+                    "Subscription {$result['subscription']['id']} requires port allocation. No available ports for plan {$order['plan_id']}."
+                );
+            }
         } catch (Exception $e) {
-            error_log('Failed to send admin notification: ' . $e->getMessage());
+            error_log('Webhook: Failed to send admin notification: ' . $e->getMessage());
         }
     }
     
-    // Send confirmation email to customer
+    // Send confirmation emails
     try {
+        error_log('Webhook: Starting email notification process');
+        
         $emailService = new EmailService();
-        // TODO: Fetch customer email and send confirmation
-        error_log('Payment confirmation email should be sent to customer');
+        $userModel = new \Karyalay\Models\User();
+        $planModel = new \Karyalay\Models\Plan();
+        
+        error_log('Webhook: Fetching customer ID: ' . $order['customer_id']);
+        error_log('Webhook: Fetching plan ID: ' . $order['plan_id']);
+        
+        // Fetch customer details
+        $customer = $userModel->findById($order['customer_id']);
+        $plan = $planModel->findById($order['plan_id']);
+        
+        if (!$customer) {
+            error_log('Webhook: Customer not found for ID: ' . $order['customer_id']);
+            return;
+        }
+        
+        if (!$plan) {
+            error_log('Webhook: Plan not found for ID: ' . $order['plan_id']);
+            return;
+        }
+        
+        error_log('Webhook: Customer found: ' . $customer['email']);
+        error_log('Webhook: Plan found: ' . $plan['name']);
+        
+        // Generate invoice URL
+        $invoiceUrl = ($_ENV['APP_URL'] ?? 'http://localhost') . '/app/billing/invoice.php?id=' . $order['id'];
+        
+        // Send payment success email to customer
+        error_log('Webhook: Preparing payment success email data');
+        $paymentData = [
+            'customer_name' => $customer['name'],
+            'customer_email' => $customer['email'],
+            'plan_name' => $plan['name'],
+            'amount' => number_format($order['amount'], 2),
+            'currency' => $order['currency'] ?? 'USD',
+            'order_id' => substr($order['id'], 0, 8),
+            'payment_id' => $order['payment_gateway_payment_id'] ?? 'N/A',
+            'invoice_url' => $invoiceUrl
+        ];
+        
+        error_log('Webhook: Sending payment success email to: ' . $customer['email']);
+        $customerEmailSent = $emailService->sendPaymentSuccessEmail($paymentData);
+        
+        if ($customerEmailSent) {
+            error_log('Webhook: Payment confirmation email sent successfully to customer');
+        } else {
+            error_log('Webhook: Failed to send payment confirmation email to customer');
+        }
+        
+        // Send new sale notification to admin
+        error_log('Webhook: Preparing admin sale notification data');
+        $saleData = [
+            'customer_name' => $customer['name'],
+            'customer_email' => $customer['email'],
+            'customer_phone' => $customer['phone'] ?? 'Not provided',
+            'plan_name' => $plan['name'],
+            'plan_price' => number_format($order['amount'], 2),
+            'currency' => $order['currency'] ?? 'USD',
+            'order_id' => substr($order['id'], 0, 8),
+            'subscription_id' => substr($result['subscription']['id'], 0, 8),
+            'payment_id' => $order['payment_gateway_payment_id'] ?? 'N/A',
+            'payment_method' => 'Online Payment'
+        ];
+        
+        error_log('Webhook: Sending new sale notification to admin');
+        $adminEmailSent = $emailService->sendNewSaleNotification($saleData);
+        
+        if ($adminEmailSent) {
+            error_log('Webhook: New sale notification sent successfully to admin');
+        } else {
+            error_log('Webhook: Failed to send new sale notification to admin');
+        }
+        
+        // Send instance provisioned email if port was allocated
+        if ($result['port_allocated'] && isset($result['port']['instance_url'])) {
+            error_log('Webhook: Sending instance provisioned email');
+            
+            $myPortUrl = ($_ENV['APP_URL'] ?? 'http://localhost') . '/app/my-port.php';
+            
+            $instanceData = [
+                'customer_name' => $customer['name'],
+                'customer_email' => $customer['email'],
+                'plan_name' => $plan['name'],
+                'instance_url' => $result['port']['instance_url'],
+                'my_port_url' => $myPortUrl
+            ];
+            
+            $instanceEmailSent = $emailService->sendInstanceProvisionedEmail($instanceData);
+            
+            if ($instanceEmailSent) {
+                error_log('Webhook: Instance provisioned email sent successfully');
+            } else {
+                error_log('Webhook: Failed to send instance provisioned email');
+            }
+        }
+        
     } catch (Exception $e) {
-        error_log('Failed to send customer confirmation: ' . $e->getMessage());
+        error_log('Webhook: Exception while sending confirmation emails: ' . $e->getMessage());
+        error_log('Webhook: Stack trace: ' . $e->getTraceAsString());
     }
 }
 

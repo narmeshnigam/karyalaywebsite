@@ -7,6 +7,7 @@
  */
 
 use Karyalay\Services\AuthService;
+use Karyalay\Services\RoleService;
 
 /**
  * Start secure PHP session
@@ -108,6 +109,8 @@ function setAuthenticatedUser(array $user, string $sessionToken): void
     
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user'] = $user;
+    $_SESSION['user_role'] = $user['role'] ?? 'CUSTOMER';
+    $_SESSION['user_name'] = $user['name'] ?? '';
     $_SESSION['session_token'] = $sessionToken;
     $_SESSION['created'] = time();
 }
@@ -190,9 +193,10 @@ function requireRole($roles, bool $redirect = true): bool
 
 /**
  * Check if user has specific role
+ * Uses RoleService to check the user_roles table for multi-role support
  * 
  * @param string|array $roles Role(s) to check
- * @return bool Returns true if user has role, false otherwise
+ * @return bool Returns true if user has any of the specified roles, false otherwise
  */
 function hasRole($roles): bool
 {
@@ -201,11 +205,14 @@ function hasRole($roles): bool
     }
     
     $user = getCurrentUser();
-    $userRole = $user['role'] ?? '';
+    if (!$user || !isset($user['id'])) {
+        return false;
+    }
     
     $checkRoles = is_array($roles) ? $roles : [$roles];
     
-    return in_array($userRole, $checkRoles);
+    // Use RoleService to check roles from user_roles table
+    return RoleService::userHasAnyRole($user['id'], $checkRoles);
 }
 
 /**

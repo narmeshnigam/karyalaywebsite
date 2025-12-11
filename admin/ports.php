@@ -10,33 +10,28 @@ require_once __DIR__ . '/../includes/admin_helpers.php';
 require_once __DIR__ . '/../includes/template_helpers.php';
 
 use Karyalay\Services\PortService;
-use Karyalay\Models\Plan;
 use Karyalay\Models\User;
 
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and ports.view permission
 require_admin();
+require_permission('ports.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
 
 // Initialize services and models
 $portService = new PortService();
-$planModel = new Plan();
 $userModel = new User();
 
 // Get filters from query parameters
 $status_filter = $_GET['status'] ?? '';
-$plan_filter = $_GET['plan'] ?? '';
 $search_query = $_GET['search'] ?? '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
-
-// Fetch all plans for filter dropdown
-$allPlans = $planModel->findAll();
 
 // Build query for counting total
 $count_sql = "SELECT COUNT(*) FROM ports WHERE 1=1";
@@ -45,11 +40,6 @@ $count_params = [];
 if (!empty($status_filter) && in_array($status_filter, ['AVAILABLE', 'RESERVED', 'ASSIGNED', 'DISABLED'])) {
     $count_sql .= " AND status = :status";
     $count_params[':status'] = $status_filter;
-}
-
-if (!empty($plan_filter)) {
-    $count_sql .= " AND plan_id = :plan_id";
-    $count_params[':plan_id'] = $plan_filter;
 }
 
 if (!empty($search_query)) {
@@ -68,25 +58,20 @@ try {
     $total_pages = 0;
 }
 
-// Build query for fetching ports with joins
+// Build query for fetching ports - get customer info via subscription
 $sql = "SELECT p.*, 
-        pl.name as plan_name, 
         u.name as customer_name, 
-        u.email as customer_email
+        u.email as customer_email,
+        s.id as subscription_id
         FROM ports p
-        LEFT JOIN plans pl ON p.plan_id = pl.id
-        LEFT JOIN users u ON p.assigned_customer_id = u.id
+        LEFT JOIN subscriptions s ON p.assigned_subscription_id = s.id
+        LEFT JOIN users u ON s.customer_id = u.id
         WHERE 1=1";
 $params = [];
 
 if (!empty($status_filter)) {
     $sql .= " AND p.status = :status";
     $params[':status'] = $status_filter;
-}
-
-if (!empty($plan_filter)) {
-    $sql .= " AND p.plan_id = :plan_id";
-    $params[':plan_id'] = $plan_filter;
 }
 
 if (!empty($search_query)) {
@@ -114,7 +99,12 @@ try {
 
 // Include admin header
 include_admin_header('Ports');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
@@ -122,12 +112,14 @@ include_admin_header('Ports');
         <p class="admin-page-description">Manage port pool and allocations</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/ports/import.php" class="btn btn-secondary">
-            <span class="btn-icon">📤</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/port-allocation-logs.php" class="btn btn-text">
+            View Allocation Logs
+        </a>
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-ports.php'); ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/ports/import.php" class="btn btn-secondary">
             Bulk Import
         </a>
-        <a href="<?php echo get_base_url(); ?>/admin/ports/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/ports/new.php" class="btn btn-primary">
             Add New Port
         </a>
     </div>
@@ -135,7 +127,7 @@ include_admin_header('Ports');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="/admin/ports.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/ports.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -159,22 +151,9 @@ include_admin_header('Ports');
             </select>
         </div>
         
-        <div class="admin-filter-group">
-            <label for="plan" class="admin-filter-label">Plan</label>
-            <select id="plan" name="plan" class="admin-filter-select">
-                <option value="">All Plans</option>
-                <?php foreach ($allPlans as $plan): ?>
-                    <option value="<?php echo htmlspecialchars($plan['id']); ?>" 
-                            <?php echo $plan_filter === $plan['id'] ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($plan['name']); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -197,7 +176,6 @@ include_admin_header('Ports');
                     <tr>
                         <th>Instance URL</th>
                         <th>Database</th>
-                        <th>Plan</th>
                         <th>Status</th>
                         <th>Assigned Customer</th>
                         <th>Assignment Date</th>
@@ -233,13 +211,6 @@ include_admin_header('Ports');
                                     <span class="text-muted">Not configured</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <?php if ($port['plan_name']): ?>
-                                    <?php echo htmlspecialchars($port['plan_name']); ?>
-                                <?php else: ?>
-                                    <span class="text-muted">No plan</span>
-                                <?php endif; ?>
-                            </td>
                             <td><?php echo get_status_badge($port['status']); ?></td>
                             <td>
                                 <?php if ($port['customer_name']): ?>
@@ -269,19 +240,11 @@ include_admin_header('Ports');
                             </td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/ports/edit.php?id=<?php echo urlencode($port['id']); ?>" 
-                                       class="btn btn-sm btn-secondary"
-                                       title="Edit port">
-                                        Edit
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/ports/view.php?id=<?php echo urlencode($port['id']); ?>" 
+                                       class="btn btn-sm btn-primary"
+                                       title="View port details">
+                                        View
                                     </a>
-                                    <?php if ($port['status'] !== 'ASSIGNED'): ?>
-                                        <a href="<?php echo get_base_url(); ?>/admin/ports/delete.php?id=<?php echo urlencode($port['id']); ?>" 
-                                           class="btn btn-sm btn-danger"
-                                           onclick="return confirm('Are you sure you want to delete this port?');"
-                                           title="Delete port">
-                                            Delete
-                                        </a>
-                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -294,13 +257,10 @@ include_admin_header('Ports');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = '/admin/ports.php';
+                $base_url = get_app_base_url() . '/admin/ports.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);
-                }
-                if (!empty($plan_filter)) {
-                    $query_params[] = 'plan=' . urlencode($plan_filter);
                 }
                 if (!empty($search_query)) {
                     $query_params[] = 'search=' . urlencode($search_query);
@@ -442,9 +402,80 @@ include_admin_header('Ports');
     margin: 0;
 }
 
+.admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+    min-width: 100%;
+    table-layout: auto;
+}
+
+.admin-table th,
+.admin-table td {
+    white-space: nowrap;
+    padding: var(--spacing-3);
+}
+
+.admin-table th:first-child,
+.admin-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+}
+
+.admin-table thead th:first-child {
+    z-index: 2;
+}
+
+/* Allow text wrapping for all content columns */
+.admin-table td {
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.admin-table td:first-child,
+.admin-table td:nth-child(2),
+.admin-table td:nth-child(4) {
+    max-width: 250px;
+}
+
+.admin-table td:nth-child(6) {
+    max-width: 150px;
+}
+
+@media (max-width: 1200px) {
+    .admin-table th,
+    .admin-table td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-2);
+    }
+    
+    .admin-table td:first-child,
+    .admin-table td:nth-child(2),
+    .admin-table td:nth-child(4) {
+        max-width: 180px;
+    }
+    
+    .admin-table td:nth-child(6) {
+        max-width: 120px;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-page-header {
         flex-direction: column;
+    }
+    
+    .admin-page-header-actions {
+        width: 100%;
+    }
+    
+    .admin-page-header-actions .btn {
+        flex: 1;
     }
     
     .admin-filters-form {
@@ -455,8 +486,25 @@ include_admin_header('Ports');
         width: 100%;
     }
     
-    .admin-table-container {
-        overflow-x: auto;
+    .admin-table th,
+    .admin-table td {
+        font-size: 12px;
+        padding: var(--spacing-2);
+    }
+    
+    .admin-table td:first-child,
+    .admin-table td:nth-child(2),
+    .admin-table td:nth-child(4) {
+        max-width: 120px;
+    }
+    
+    .admin-table td:nth-child(6) {
+        max-width: 100px;
+    }
+    
+    .btn-sm {
+        font-size: 11px;
+        padding: 4px 8px;
     }
 }
 </style>

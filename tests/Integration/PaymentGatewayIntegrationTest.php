@@ -114,9 +114,9 @@ class PaymentGatewayIntegrationTest extends TestCase
         
         $this->assertTrue($updateResult, 'Payment gateway ID update should succeed');
         
-        // Verify order has payment gateway ID
+        // Verify order has payment gateway order ID
         $updatedOrder = $this->orderService->getOrder($order['id']);
-        $this->assertEquals($paymentResult['order_id'], $updatedOrder['payment_gateway_id']);
+        $this->assertEquals($paymentResult['order_id'], $updatedOrder['pg_order_id']);
     }
 
     /**
@@ -273,7 +273,7 @@ class PaymentGatewayIntegrationTest extends TestCase
         // ===== STEP 5: Verify Order Status =====
         $finalOrder = $this->orderService->getOrder($order['id']);
         $this->assertEquals('SUCCESS', $finalOrder['status']);
-        $this->assertEquals($paymentResult['order_id'], $finalOrder['payment_gateway_id']);
+        $this->assertEquals($paymentResult['order_id'], $finalOrder['pg_order_id']);
     }
 
     /**
@@ -387,7 +387,8 @@ class PaymentGatewayIntegrationTest extends TestCase
         $this->assertEquals(1, $stats['successful_orders']);
         $this->assertEquals(1, $stats['failed_orders']);
         $this->assertEquals(1, $stats['pending_orders']);
-        $this->assertEquals($plan['price'], $stats['total_spent']);
+        $effectivePrice = !empty($plan['discounted_price']) ? $plan['discounted_price'] : $plan['mrp'];
+        $this->assertEquals($effectivePrice, $stats['total_spent']);
     }
 
     /**

@@ -12,6 +12,7 @@ use Karyalay\Services\ContentService;
 
 startSecureSession();
 require_admin();
+require_permission('content.edit');
 
 $contentService = new ContentService();
 
@@ -19,7 +20,7 @@ $feature_id = $_GET['id'] ?? '';
 
 if (empty($feature_id)) {
     $_SESSION['admin_error'] = 'Feature ID is required.';
-    header('Location: ' . get_base_url() . '/admin/features.php');
+    header('Location: ' . get_app_base_url() . '/admin/features.php');
     exit;
 }
 
@@ -27,7 +28,7 @@ $feature = $contentService->read('feature', $feature_id);
 
 if (!$feature) {
     $_SESSION['admin_error'] = 'Feature not found.';
-    header('Location: ' . get_base_url() . '/admin/features.php');
+    header('Location: ' . get_app_base_url() . '/admin/features.php');
     exit;
 }
 
@@ -116,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Feature updated successfully!';
-                header('Location: ' . get_base_url() . '/admin/features.php');
+                header('Location: ' . get_app_base_url() . '/admin/features.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update feature. Please check if the slug is unique.';
@@ -132,7 +133,7 @@ include_admin_header('Edit Feature');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/features.php">Features</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/features.php">Features</a>
             <span class="breadcrumb-separator">/</span>
             <span>Edit Feature</span>
         </nav>
@@ -140,7 +141,7 @@ include_admin_header('Edit Feature');
         <p class="admin-page-description">Update feature information</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/features.php" class="btn btn-secondary">← Back to Features</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/features.php" class="btn btn-secondary">← Back to Features</a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Feature</button>
     </div>
 </div>
@@ -153,7 +154,7 @@ include_admin_header('Edit Feature');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/features/edit.php?id=<?php echo urlencode($feature_id); ?>" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/features/edit.php?id=<?php echo urlencode($feature_id); ?>" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -251,12 +252,12 @@ include_admin_header('Edit Feature');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Feature</button>
-            <a href="<?php echo get_base_url(); ?>/admin/features.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/features.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
 
-<form id="deleteForm" method="POST" action="<?php echo get_base_url(); ?>/admin/features/delete.php" style="display: none;">
+<form id="deleteForm" method="POST" action="<?php echo get_app_base_url(); ?>/admin/features/delete.php" style="display: none;">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="id" value="<?php echo htmlspecialchars($feature_id); ?>">
 </form>

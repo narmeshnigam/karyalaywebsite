@@ -420,7 +420,7 @@ class CustomerDetailAggregationPropertyTest extends TestCase
         $orderData = [
             'customer_id' => $customerId,
             'plan_id' => $planId,
-            'amount' => $plan['price'],
+            'amount' => !empty($plan['discounted_price']) ? $plan['discounted_price'] : $plan['mrp'],
             'currency' => $plan['currency'],
             'status' => 'SUCCESS',
             'payment_method' => 'card'

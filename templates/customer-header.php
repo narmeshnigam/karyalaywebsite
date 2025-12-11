@@ -9,8 +9,11 @@ if (!function_exists('get_base_url')) {
     require_once __DIR__ . '/../includes/template_helpers.php';
 }
 
+use Karyalay\Services\RoleService;
+
 // Get base URL for proper path generation
 $base_url = get_base_url();
+$app_base_url = get_app_base_url();
 
 // Ensure user is authenticated
 if (!isset($_SESSION['user_id'])) {
@@ -26,6 +29,8 @@ $current_section = '';
 $request_uri = $_SERVER['REQUEST_URI'];
 if (strpos($request_uri, '/app/dashboard') !== false) {
     $current_section = 'dashboard';
+} elseif (strpos($request_uri, '/app/my-port') !== false) {
+    $current_section = 'my-port';
 } elseif (strpos($request_uri, '/app/subscription') !== false || strpos($request_uri, '/app/plans') !== false || strpos($request_uri, '/app/setup') !== false) {
     $current_section = 'subscription';
 } elseif (strpos($request_uri, '/app/billing') !== false) {
@@ -42,7 +47,7 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) . ' - Customer Portal' : 'Customer Portal'; ?> - Karyalay</title>
+    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) . ' - Customer Portal' : 'Customer Portal'; ?> - <?php echo htmlspecialchars(get_brand_name()); ?></title>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="<?php echo css_url('main.css'); ?>">
@@ -59,8 +64,8 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
         <!-- Customer Portal Sidebar -->
         <aside class="customer-portal-sidebar" role="navigation" aria-label="Customer Portal Navigation">
             <div class="customer-portal-sidebar-header">
-                <a href="<?php echo $base_url; ?>/app/dashboard.php" class="customer-portal-logo">
-                    <span class="customer-portal-logo-text">Karyalay</span>
+                <a href="<?php echo $app_base_url; ?>/app/dashboard.php" class="customer-portal-logo">
+                    <?php echo render_brand_logo('dark_bg', 'customer-portal-logo-img', 32); ?>
                 </a>
             </div>
 
@@ -68,7 +73,7 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
                 <ul class="customer-portal-nav-list">
                     <!-- Dashboard -->
                     <li class="customer-portal-nav-item">
-                        <a href="<?php echo $base_url; ?>/app/dashboard.php" class="customer-portal-nav-link <?php echo $current_section === 'dashboard' ? 'active' : ''; ?>">
+                        <a href="<?php echo $app_base_url; ?>/app/dashboard.php" class="customer-portal-nav-link <?php echo $current_section === 'dashboard' ? 'active' : ''; ?>">
                             <span class="customer-portal-nav-icon">📊</span>
                             <span class="customer-portal-nav-text">Dashboard</span>
                         </a>
@@ -76,15 +81,23 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
 
                     <!-- Subscription -->
                     <li class="customer-portal-nav-item">
-                        <a href="<?php echo $base_url; ?>/app/subscription.php" class="customer-portal-nav-link <?php echo $current_section === 'subscription' ? 'active' : ''; ?>">
+                        <a href="<?php echo $app_base_url; ?>/app/subscription.php" class="customer-portal-nav-link <?php echo $current_section === 'subscription' ? 'active' : ''; ?>">
                             <span class="customer-portal-nav-icon">📦</span>
                             <span class="customer-portal-nav-text">Subscription</span>
                         </a>
                     </li>
 
+                    <!-- My Port -->
+                    <li class="customer-portal-nav-item">
+                        <a href="<?php echo $app_base_url; ?>/app/my-port.php" class="customer-portal-nav-link <?php echo $current_section === 'my-port' ? 'active' : ''; ?>">
+                            <span class="customer-portal-nav-icon">🔌</span>
+                            <span class="customer-portal-nav-text">My Port</span>
+                        </a>
+                    </li>
+
                     <!-- Billing -->
                     <li class="customer-portal-nav-item">
-                        <a href="<?php echo $base_url; ?>/app/billing/history.php" class="customer-portal-nav-link <?php echo $current_section === 'billing' ? 'active' : ''; ?>">
+                        <a href="<?php echo $app_base_url; ?>/app/billing/history.php" class="customer-portal-nav-link <?php echo $current_section === 'billing' ? 'active' : ''; ?>">
                             <span class="customer-portal-nav-icon">💳</span>
                             <span class="customer-portal-nav-text">Billing</span>
                         </a>
@@ -92,7 +105,7 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
 
                     <!-- Profile -->
                     <li class="customer-portal-nav-item">
-                        <a href="<?php echo $base_url; ?>/app/profile.php" class="customer-portal-nav-link <?php echo $current_section === 'profile' ? 'active' : ''; ?>">
+                        <a href="<?php echo $app_base_url; ?>/app/profile.php" class="customer-portal-nav-link <?php echo $current_section === 'profile' ? 'active' : ''; ?>">
                             <span class="customer-portal-nav-icon">👤</span>
                             <span class="customer-portal-nav-text">Profile</span>
                         </a>
@@ -100,7 +113,7 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
 
                     <!-- Support -->
                     <li class="customer-portal-nav-item">
-                        <a href="<?php echo $base_url; ?>/app/support/tickets.php" class="customer-portal-nav-link <?php echo $current_section === 'support' ? 'active' : ''; ?>">
+                        <a href="<?php echo $app_base_url; ?>/app/support/tickets.php" class="customer-portal-nav-link <?php echo $current_section === 'support' ? 'active' : ''; ?>">
                             <span class="customer-portal-nav-icon">🎫</span>
                             <span class="customer-portal-nav-text">Support</span>
                         </a>
@@ -145,11 +158,11 @@ if (strpos($request_uri, '/app/dashboard') !== false) {
                         </button>
                         
                         <div class="customer-portal-user-dropdown">
-                            <a href="<?php echo $base_url; ?>/app/profile.php" class="customer-portal-user-dropdown-item">Profile</a>
-                            <a href="<?php echo $base_url; ?>/app/security.php" class="customer-portal-user-dropdown-item">Security</a>
-                            <?php if (isset($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'])): ?>
+                            <a href="<?php echo $app_base_url; ?>/app/profile.php" class="customer-portal-user-dropdown-item">Profile</a>
+                            <a href="<?php echo $app_base_url; ?>/app/security.php" class="customer-portal-user-dropdown-item">Security</a>
+                            <?php if (isset($_SESSION['user_id']) && RoleService::canAccessAdmin($_SESSION['user_id'])): ?>
                                 <div class="customer-portal-user-dropdown-divider"></div>
-                                <a href="<?php echo $base_url; ?>/admin/dashboard.php" class="customer-portal-user-dropdown-item">
+                                <a href="<?php echo $app_base_url; ?>/admin/dashboard.php" class="customer-portal-user-dropdown-item">
                                     <span class="dropdown-icon">⚡</span>
                                     Admin Dashboard
                                 </a>

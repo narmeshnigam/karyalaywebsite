@@ -1,4 +1,4 @@
-# Karyalay Portal System - Installation Wizard
+# SellerPortal System - Installation Wizard
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@
 
 ## Overview
 
-The Karyalay Portal System Installation Wizard is a web-based setup interface that guides you through the initial configuration of your system. It automates the process of:
+The SellerPortal System Installation Wizard is a web-based setup interface that guides you through the initial configuration of your system. It automates the process of:
 
 - Database connection setup
 - Database schema migration
@@ -75,7 +75,7 @@ The wizard is designed to work seamlessly on both localhost development environm
 
 ### For Localhost (XAMPP/MAMP/WAMP)
 
-1. Extract the Karyalay Portal System files to your web server directory
+1. Extract the SellerPortal System files to your web server directory
    - XAMPP: `C:\xampp\htdocs\karyalay\`
    - MAMP: `/Applications/MAMP/htdocs/karyalay/`
    - WAMP: `C:\wamp64\www\karyalay\`
@@ -95,7 +95,7 @@ The wizard is designed to work seamlessly on both localhost development environm
 
 ### For Production (Hostinger/Shared Hosting)
 
-1. Upload the Karyalay Portal System files to your hosting account
+1. Upload the SellerPortal System files to your hosting account
    - Via FTP/SFTP to `public_html/` or your domain directory
    - Or use the hosting control panel's file manager
 
@@ -930,7 +930,7 @@ session.gc_maxlifetime = 3600
 
 ## License
 
-Copyright © 2025 Karyalay Portal System. All rights reserved.
+Copyright © 2025 SellerPortal System. All rights reserved.
 
 ---
 
@@ -950,6 +950,6 @@ Copyright © 2025 Karyalay Portal System. All rights reserved.
 
 ---
 
-**Thank you for choosing Karyalay Portal System!**
+**Thank you for choosing SellerPortal System!**
 
 For the latest updates and documentation, visit the project repository.

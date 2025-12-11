@@ -14,8 +14,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and case_studies.manage permission
 require_admin();
+require_permission('case_studies.manage');
 
 // Initialize services
 $contentService = new ContentService();
@@ -95,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $_SESSION['flash_message'] = 'Case study created successfully!';
                 $_SESSION['flash_type'] = 'success';
-                header('Location: ' . get_base_url() . '/admin/case-studies.php');
+                header('Location: ' . get_app_base_url() . '/admin/case-studies.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create case study. Please check if the slug is unique.';
@@ -117,7 +118,7 @@ include_admin_header('Create Case Study');
         <p class="admin-page-description">Document a client success story</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">
             ← Back to Case Studies
         </a>
     </div>
@@ -134,7 +135,7 @@ include_admin_header('Create Case Study');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/case-studies/new.php" class="admin-form">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/case-studies/new.php" class="admin-form">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     
     <div class="admin-card">
@@ -303,7 +304,7 @@ include_admin_header('Create Case Study');
     
     <div class="admin-form-actions">
         <button type="submit" class="btn btn-primary">Create Case Study</button>
-        <a href="<?php echo get_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">Cancel</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="btn btn-secondary">Cancel</a>
     </div>
 </form>
 

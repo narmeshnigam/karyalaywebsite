@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../includes/auth_helpers.php';
 require_once __DIR__ . '/../../includes/admin_helpers.php';
+require_once __DIR__ . '/../../includes/template_helpers.php';
 
 use Karyalay\Models\Setting;
 use Karyalay\Middleware\CsrfMiddleware;
@@ -15,8 +16,9 @@ use Karyalay\Services\MediaUploadService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and settings.general permission (ADMIN only)
 require_admin();
+require_permission('settings.general');
 
 // Initialize services
 $settingModel = new Setting();
@@ -29,7 +31,7 @@ $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate CSRF token
-    if (!$csrfMiddleware->validateToken($_POST['csrf_token'] ?? '')) {
+    if (!$csrfMiddleware->validate()) {
         $error_message = 'Invalid security token. Please try again.';
     } else {
         try {
@@ -46,18 +48,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Invalid secondary color format. Use hex format (e.g., #10b981)');
             }
             
-            // Handle logo upload
-            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+            // Handle logo for light backgrounds (dark logo) upload
+            if (isset($_FILES['logo_light_bg']) && $_FILES['logo_light_bg']['error'] === UPLOAD_ERR_OK) {
                 $logo_result = $mediaUploadService->uploadFile(
-                    $_FILES['logo'],
-                    ['image/jpeg', 'image/png', 'image/svg+xml'],
-                    5 * 1024 * 1024 // 5MB max
+                    $_FILES['logo_light_bg'],
+                    $_SESSION['user_id']
                 );
                 
                 if ($logo_result['success']) {
-                    $settingModel->set('logo_url', $logo_result['url']);
+                    $settingModel->set('logo_light_bg', $logo_result['data']['url']);
                 } else {
-                    throw new Exception('Logo upload failed: ' . $logo_result['error']);
+                    throw new Exception('Logo (light bg) upload failed: ' . $logo_result['error']);
+                }
+            }
+            
+            // Handle logo for dark backgrounds (light logo) upload
+            if (isset($_FILES['logo_dark_bg']) && $_FILES['logo_dark_bg']['error'] === UPLOAD_ERR_OK) {
+                $logo_result = $mediaUploadService->uploadFile(
+                    $_FILES['logo_dark_bg'],
+                    $_SESSION['user_id']
+                );
+                
+                if ($logo_result['success']) {
+                    $settingModel->set('logo_dark_bg', $logo_result['data']['url']);
+                } else {
+                    throw new Exception('Logo (dark bg) upload failed: ' . $logo_result['error']);
                 }
             }
             
@@ -65,16 +80,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_FILES['favicon']) && $_FILES['favicon']['error'] === UPLOAD_ERR_OK) {
                 $favicon_result = $mediaUploadService->uploadFile(
                     $_FILES['favicon'],
-                    ['image/x-icon', 'image/png', 'image/svg+xml'],
-                    1 * 1024 * 1024 // 1MB max
+                    $_SESSION['user_id']
                 );
                 
                 if ($favicon_result['success']) {
-                    $settingModel->set('favicon_url', $favicon_result['url']);
+                    $settingModel->set('favicon_url', $favicon_result['data']['url']);
                 } else {
                     throw new Exception('Favicon upload failed: ' . $favicon_result['error']);
                 }
             }
+            
+            // Save brand name
+            $brand_name = trim($_POST['brand_name'] ?? 'SellerPortal');
+            if (empty($brand_name)) {
+                $brand_name = 'SellerPortal';
+            }
+            $settingModel->set('brand_name', $brand_name);
             
             // Save color settings
             $settingModel->set('primary_color', $primary_color);
@@ -89,17 +110,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch current settings
 $settings = $settingModel->getMultiple([
-    'logo_url',
+    'brand_name',
+    'logo_light_bg',
+    'logo_dark_bg',
     'favicon_url',
     'primary_color',
     'secondary_color'
 ]);
 
 // Set defaults if not found
-$logo_url = $settings['logo_url'] ?? '';
-$favicon_url = $settings['favicon_url'] ?? '';
+$brand_name = $settings['brand_name'] ?? 'SellerPortal';
+$logo_light_bg_raw = $settings['logo_light_bg'] ?? '';
+$logo_dark_bg_raw = $settings['logo_dark_bg'] ?? '';
+$favicon_url_raw = $settings['favicon_url'] ?? '';
 $primary_color = $settings['primary_color'] ?? '#3b82f6';
 $secondary_color = $settings['secondary_color'] ?? '#10b981';
+
+// Build full URLs for preview display
+$preview_base_url = get_app_base_url();
+$logo_light_bg = $logo_light_bg_raw ? $preview_base_url . $logo_light_bg_raw : '';
+$logo_dark_bg = $logo_dark_bg_raw ? $preview_base_url . $logo_dark_bg_raw : '';
+$favicon_url = $favicon_url_raw ? $preview_base_url . $favicon_url_raw : '';
 
 // Generate CSRF token
 $csrf_token = getCsrfToken();
@@ -115,11 +146,13 @@ include_admin_header('Branding Settings');
     </div>
 </div>
 
+<?php $base_url = get_app_base_url(); ?>
 <!-- Settings Navigation -->
 <div class="settings-nav">
-    <a href="/karyalayportal/admin/settings/general.php" class="settings-nav-item">General</a>
-    <a href="/karyalayportal/admin/settings/branding.php" class="settings-nav-item active">Branding</a>
-    <a href="/karyalayportal/admin/settings/seo.php" class="settings-nav-item">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/general.php" class="settings-nav-item">General</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/branding.php" class="settings-nav-item active">Branding</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/seo.php" class="settings-nav-item">SEO</a>
+    <a href="<?php echo $base_url; ?>/admin/settings/legal-identity.php" class="settings-nav-item">Legal Identity</a>
 </div>
 
 <!-- Success/Error Messages -->
@@ -137,32 +170,76 @@ include_admin_header('Branding Settings');
 
 <!-- Branding Settings Form -->
 <div class="admin-card">
-    <form method="POST" action="/admin/settings/branding.php" enctype="multipart/form-data" class="admin-form">
+    <form method="POST" action="<?php echo $base_url; ?>/admin/settings/branding.php" enctype="multipart/form-data" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        
+        <div class="form-section">
+            <h3 class="form-section-title">Brand Identity</h3>
+            
+            <div class="form-group">
+                <label for="brand_name" class="form-label">
+                    Brand Name
+                </label>
+                <input 
+                    type="text" 
+                    id="brand_name" 
+                    name="brand_name" 
+                    class="form-input" 
+                    value="<?php echo htmlspecialchars($brand_name); ?>"
+                    maxlength="100"
+                    placeholder="SellerPortal"
+                >
+                <p class="form-help">The brand name displayed throughout the application (e.g., in headers, emails). Default: SellerPortal</p>
+            </div>
+        </div>
         
         <div class="form-section">
             <h3 class="form-section-title">Logo & Favicon</h3>
             
             <div class="form-group">
-                <label for="logo" class="form-label">
-                    Site Logo
+                <label for="logo_light_bg" class="form-label">
+                    Logo for Light Backgrounds
                 </label>
+                <p class="form-help" style="margin-top: 0; margin-bottom: var(--spacing-3);">Used on the public website header. Should be a dark-colored logo that's visible on light backgrounds.</p>
                 
-                <?php if ($logo_url): ?>
+                <?php if ($logo_light_bg): ?>
                     <div class="image-preview">
-                        <img src="<?php echo htmlspecialchars($logo_url); ?>" alt="Current logo" class="preview-image">
-                        <p class="preview-label">Current Logo</p>
+                        <img src="<?php echo htmlspecialchars($logo_light_bg); ?>" alt="Current logo for light backgrounds" class="preview-image">
+                        <p class="preview-label">Current Logo (Light BG)</p>
                     </div>
                 <?php endif; ?>
                 
                 <input 
                     type="file" 
-                    id="logo" 
-                    name="logo" 
+                    id="logo_light_bg" 
+                    name="logo_light_bg" 
                     class="form-input-file" 
                     accept="image/jpeg,image/png,image/svg+xml"
                 >
-                <p class="form-help">Upload a new logo (JPG, PNG, or SVG, max 5MB). Recommended size: 200x60px</p>
+                <p class="form-help">Upload a logo (JPG, PNG, or SVG, max 5MB). Recommended size: 200x60px</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="logo_dark_bg" class="form-label">
+                    Logo for Dark Backgrounds
+                </label>
+                <p class="form-help" style="margin-top: 0; margin-bottom: var(--spacing-3);">Used on the public footer, admin panel, and customer portal. Should be a light-colored logo that's visible on dark backgrounds.</p>
+                
+                <?php if ($logo_dark_bg): ?>
+                    <div class="image-preview" style="background-color: var(--color-gray-800); border-color: var(--color-gray-700);">
+                        <img src="<?php echo htmlspecialchars($logo_dark_bg); ?>" alt="Current logo for dark backgrounds" class="preview-image">
+                        <p class="preview-label" style="color: var(--color-gray-300);">Current Logo (Dark BG)</p>
+                    </div>
+                <?php endif; ?>
+                
+                <input 
+                    type="file" 
+                    id="logo_dark_bg" 
+                    name="logo_dark_bg" 
+                    class="form-input-file" 
+                    accept="image/jpeg,image/png,image/svg+xml"
+                >
+                <p class="form-help">Upload a logo (JPG, PNG, or SVG, max 5MB). Recommended size: 200x60px</p>
             </div>
             
             <div class="form-group">
@@ -246,7 +323,7 @@ include_admin_header('Branding Settings');
             <button type="submit" class="btn btn-primary">
                 Save Settings
             </button>
-            <a href="/karyalayportal/admin/dashboard.php" class="btn btn-secondary">
+            <a href="<?php echo get_app_base_url(); ?>/admin/dashboard.php" class="btn btn-secondary">
                 Cancel
             </a>
         </div>

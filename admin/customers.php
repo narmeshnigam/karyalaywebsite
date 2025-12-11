@@ -14,8 +14,9 @@ use Karyalay\Models\User;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and customers.view permission
 require_admin();
+require_permission('customers.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -31,7 +32,8 @@ $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
 // Build query for counting total customers
-$count_sql = "SELECT COUNT(*) FROM users WHERE role = 'CUSTOMER'";
+// Include users with CUSTOMER role or no admin roles (ADMIN, SUPPORT, SALES, CONTENT_EDITOR)
+$count_sql = "SELECT COUNT(*) FROM users WHERE (UPPER(role) = 'CUSTOMER' OR role IS NULL OR UPPER(role) NOT IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'))";
 $count_params = [];
 
 if (!empty($status_filter)) {
@@ -61,6 +63,7 @@ try {
 }
 
 // Build query for fetching customers with subscription status
+// Include users with CUSTOMER role or no admin roles (ADMIN, SUPPORT, SALES, CONTENT_EDITOR)
 $sql = "SELECT u.*, 
         COUNT(DISTINCT s.id) as total_subscriptions,
         COUNT(DISTINCT CASE WHEN s.status = 'ACTIVE' THEN s.id END) as active_subscriptions,
@@ -68,7 +71,7 @@ $sql = "SELECT u.*,
         (SELECT status FROM subscriptions WHERE customer_id = u.id ORDER BY end_date DESC LIMIT 1) as latest_subscription_status
         FROM users u
         LEFT JOIN subscriptions s ON u.id = s.customer_id
-        WHERE u.role = 'CUSTOMER'";
+        WHERE (UPPER(u.role) = 'CUSTOMER' OR u.role IS NULL OR UPPER(u.role) NOT IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'))";
 $params = [];
 
 if (!empty($status_filter)) {
@@ -106,18 +109,26 @@ try {
 
 // Include admin header
 include_admin_header('Customers');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <h1 class="admin-page-title">Customer Management</h1>
         <p class="admin-page-description">View and manage customer accounts</p>
     </div>
+    <div class="admin-page-header-actions">
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-customers.php'); ?>
+    </div>
 </div>
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="/admin/customers.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/customers.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -142,7 +153,7 @@ include_admin_header('Customers');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="/karyalayportal/admin/customers.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/customers.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -237,7 +248,7 @@ include_admin_header('Customers');
                             </td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="/karyalayportal/admin/customers/view.php?id=<?php echo urlencode($customer['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/customers/view.php?id=<?php echo urlencode($customer['id']); ?>" 
                                        class="btn btn-sm btn-primary"
                                        title="View customer details">
                                         View
@@ -254,7 +265,7 @@ include_admin_header('Customers');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = '/admin/customers.php';
+                $base_url = get_app_base_url() . '/admin/customers.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);
@@ -354,15 +365,64 @@ include_admin_header('Customers');
     gap: var(--spacing-2);
 }
 
+/* Table Layout */
+.admin-table-container {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.admin-table th,
+.admin-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Column widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) { width: 180px; } /* Customer */
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) { width: 140px; } /* Business Name */
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) { width: 120px; } /* Contact Info */
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) { width: 110px; } /* Registration Date */
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) { width: 120px; } /* Subscription Status */
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) { width: 130px; white-space: normal; } /* Total Subscriptions */
+
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) { width: 100px; } /* Latest Expiry */
+
+.admin-table th:nth-child(8),
+.admin-table td:nth-child(8) { width: 90px; } /* Actions */
+
 .table-cell-primary {
     font-weight: var(--font-weight-semibold);
     color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .table-cell-secondary {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
-    margin-top: var(--spacing-1);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .text-muted {
@@ -402,6 +462,17 @@ include_admin_header('Customers');
     margin: 0;
 }
 
+@media (max-width: 1200px) {
+    .admin-table {
+        table-layout: auto;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        white-space: normal;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-page-header {
         flex-direction: column;
@@ -413,10 +484,6 @@ include_admin_header('Customers');
     
     .admin-filter-group {
         width: 100%;
-    }
-    
-    .admin-table-container {
-        overflow-x: auto;
     }
 }
 </style>

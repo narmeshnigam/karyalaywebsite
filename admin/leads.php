@@ -1,236 +1,437 @@
 <?php
 /**
- * Leads Management Page
- * View and manage leads captured from CTA forms
+ * Admin Leads List Page
+ * Displays all leads captured from CTA forms
  */
 
-// Load Composer autoloader
-require_once __DIR__ . '/../vendor/autoload.php';
-
-// Load configuration
-$config = require __DIR__ . '/../config/app.php';
-
-// Set error reporting based on environment
-if ($config['debug']) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', '1');
-} else {
-    error_reporting(0);
-    ini_set('display_errors', '0');
-}
-
-// Load authentication helpers
+require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/admin_helpers.php';
+
+use Karyalay\Models\Lead;
 
 // Start secure session
 startSecureSession();
 
-// Check if user is authenticated and is admin
-if (!isAuthenticated() || !isAdmin()) {
-    header('Location: ' . get_base_url() . '/login.php');
-    exit;
-}
+// Require admin authentication and leads.view permission
+require_admin();
+require_permission('leads.view');
 
-// Include template helpers
-require_once __DIR__ . '/../includes/template_helpers.php';
+// Get database connection
+$db = \Karyalay\Database\Connection::getInstance();
 
-use Karyalay\Models\Lead;
-
+// Initialize models
 $leadModel = new Lead();
 
-// Handle status filter
-$statusFilter = $_GET['status'] ?? null;
-$filters = [];
-if ($statusFilter && in_array($statusFilter, ['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST'])) {
-    $filters['status'] = $statusFilter;
+// Get filters from query parameters
+$status_filter = $_GET['status'] ?? '';
+$search_query = $_GET['search'] ?? '';
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$per_page = 20;
+$offset = ($page - 1) * $per_page;
+
+// Build query for counting total leads
+$count_sql = "SELECT COUNT(*) FROM leads WHERE 1=1";
+$count_params = [];
+
+if (!empty($status_filter)) {
+    $count_sql .= " AND status = :status";
+    $count_params[':status'] = $status_filter;
 }
 
-// Get all leads
-$leads = $leadModel->getAll($filters);
+if (!empty($search_query)) {
+    $count_sql .= " AND (name LIKE :search OR email LIKE :search OR company LIKE :search OR phone LIKE :search)";
+    $count_params[':search'] = '%' . $search_query . '%';
+}
 
-// Set page variables
-$page_title = 'Leads Management';
+try {
+    $count_stmt = $db->prepare($count_sql);
+    $count_stmt->execute($count_params);
+    $total_leads = $count_stmt->fetchColumn();
+    $total_pages = ceil($total_leads / $per_page);
+} catch (PDOException $e) {
+    error_log("Leads count error: " . $e->getMessage());
+    $total_leads = 0;
+    $total_pages = 0;
+}
+
+// Build query for fetching leads
+$sql = "SELECT * FROM leads WHERE 1=1";
+$params = [];
+
+if (!empty($status_filter)) {
+    $sql .= " AND status = :status";
+    $params[':status'] = $status_filter;
+}
+
+if (!empty($search_query)) {
+    $sql .= " AND (name LIKE :search OR email LIKE :search OR company LIKE :search OR phone LIKE :search)";
+    $params[':search'] = '%' . $search_query . '%';
+}
+
+$sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+
+try {
+    $stmt = $db->prepare($sql);
+    
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
+    $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Leads list error: " . $e->getMessage());
+    $leads = [];
+}
 
 // Include admin header
-include __DIR__ . '/../templates/admin-header.php';
+include_admin_header('Leads');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
 
-<div class="admin-content">
-    <div class="admin-header">
-        <h1>Leads Management</h1>
-        <p class="text-gray-600">View and manage leads captured from your website</p>
-    </div>
+<?php render_export_button_styles(); ?>
 
-    <!-- Status Filter -->
-    <div class="card mb-6">
-        <div class="card-body">
-            <div class="flex gap-2 flex-wrap">
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php" 
-                   class="btn <?php echo !$statusFilter ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    All Leads (<?php echo count($leadModel->getAll()); ?>)
-                </a>
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php?status=NEW" 
-                   class="btn <?php echo $statusFilter === 'NEW' ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    New (<?php echo count($leadModel->getAll(['status' => 'NEW'])); ?>)
-                </a>
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php?status=CONTACTED" 
-                   class="btn <?php echo $statusFilter === 'CONTACTED' ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    Contacted
-                </a>
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php?status=QUALIFIED" 
-                   class="btn <?php echo $statusFilter === 'QUALIFIED' ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    Qualified
-                </a>
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php?status=CONVERTED" 
-                   class="btn <?php echo $statusFilter === 'CONVERTED' ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    Converted
-                </a>
-                <a href="<?php echo get_base_url(); ?>/admin/leads.php?status=LOST" 
-                   class="btn <?php echo $statusFilter === 'LOST' ? 'btn-primary' : 'btn-outline'; ?> btn-sm">
-                    Lost
-                </a>
-            </div>
+<div class="admin-page-header">
+    <div class="admin-page-header-content">
+        <h1 class="admin-page-title">Lead Management</h1>
+        <p class="admin-page-description">View and manage leads captured from your website</p>
+    </div>
+    <div class="admin-page-header-actions">
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-leads.php'); ?>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="admin-filters-section">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/leads.php" class="admin-filters-form">
+        <div class="admin-filter-group">
+            <label for="search" class="admin-filter-label">Search</label>
+            <input 
+                type="text" 
+                id="search" 
+                name="search" 
+                class="admin-filter-input" 
+                placeholder="Search by name, email, company, or phone..."
+                value="<?php echo htmlspecialchars($search_query); ?>"
+            >
         </div>
-    </div>
+        
+        <div class="admin-filter-group">
+            <label for="status" class="admin-filter-label">Lead Status</label>
+            <select id="status" name="status" class="admin-filter-select">
+                <option value="">All Leads</option>
+                <option value="NEW" <?php echo $status_filter === 'NEW' ? 'selected' : ''; ?>>New</option>
+                <option value="CONTACTED" <?php echo $status_filter === 'CONTACTED' ? 'selected' : ''; ?>>Contacted</option>
+                <option value="QUALIFIED" <?php echo $status_filter === 'QUALIFIED' ? 'selected' : ''; ?>>Qualified</option>
+                <option value="CONVERTED" <?php echo $status_filter === 'CONVERTED' ? 'selected' : ''; ?>>Converted</option>
+                <option value="LOST" <?php echo $status_filter === 'LOST' ? 'selected' : ''; ?>>Lost</option>
+            </select>
+        </div>
+        
+        <div class="admin-filter-actions">
+            <button type="submit" class="btn btn-secondary">Apply Filters</button>
+            <a href="<?php echo get_app_base_url(); ?>/admin/leads.php" class="btn btn-text">Clear</a>
+        </div>
+    </form>
+</div>
 
+<!-- Leads Table -->
+<div class="admin-card">
     <?php if (empty($leads)): ?>
-        <div class="card">
-            <div class="card-body text-center py-12">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <h3 class="mt-2 text-lg font-medium text-gray-900">No leads found</h3>
-                <p class="mt-1 text-sm text-gray-500">
-                    <?php echo $statusFilter ? 'No leads with this status.' : 'Leads will appear here when visitors submit the contact form.'; ?>
-                </p>
-            </div>
-        </div>
+        <?php 
+        render_empty_state(
+            'No leads found',
+            'No leads match your current filters',
+            '',
+            ''
+        );
+        ?>
     <?php else: ?>
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Lead</th>
+                        <th>Company</th>
+                        <th>Contact Info</th>
+                        <th>Date Received</th>
+                        <th>Lead Status</th>
+                        <th>Source</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($leads as $lead): ?>
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Company</th>
-                            <th>Source</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($leads as $lead): ?>
-                            <tr>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($lead['name']); ?></strong>
-                                </td>
-                                <td>
-                                    <a href="mailto:<?php echo htmlspecialchars($lead['email']); ?>" class="text-primary">
-                                        <?php echo htmlspecialchars($lead['email']); ?>
-                                    </a>
-                                </td>
-                                <td>
-                                    <?php if (!empty($lead['phone'])): ?>
-                                        <a href="tel:<?php echo htmlspecialchars($lead['phone']); ?>">
-                                            <?php echo htmlspecialchars($lead['phone']); ?>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-gray-400">—</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php 
-                                    $company = $lead['company'] ?? $lead['company_name'] ?? '';
-                                    echo !empty($company) ? htmlspecialchars($company) : '<span class="text-gray-400">—</span>'; 
-                                    ?>
-                                </td>
-                                <td>
-                                    <span class="badge badge-info">
-                                        <?php echo htmlspecialchars($lead['source'] ?? 'website'); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge badge-<?php 
-                                        echo match($lead['status']) {
-                                            'NEW' => 'primary',
-                                            'CONTACTED' => 'info',
-                                            'QUALIFIED' => 'warning',
-                                            'CONVERTED' => 'success',
-                                            'LOST' => 'danger',
-                                            default => 'secondary'
-                                        };
-                                    ?>">
-                                        <?php echo htmlspecialchars($lead['status']); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <small class="text-gray-600">
-                                        <?php echo date('M j, Y g:i A', strtotime($lead['created_at'])); ?>
-                                    </small>
-                                </td>
-                                <td>
-                                    <a href="<?php echo get_base_url(); ?>/admin/leads/view.php?id=<?php echo urlencode($lead['id']); ?>" 
-                                       class="btn btn-sm btn-outline">
+                            <td>
+                                <div class="table-cell-primary">
+                                    <?php echo htmlspecialchars($lead['name']); ?>
+                                </div>
+                                <div class="table-cell-secondary">
+                                    <?php echo htmlspecialchars($lead['email']); ?>
+                                </div>
+                            </td>
+                            <td>
+                                <?php 
+                                $company = $lead['company'] ?? $lead['company_name'] ?? '';
+                                if (!empty($company)): 
+                                ?>
+                                    <?php echo htmlspecialchars($company); ?>
+                                <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if (!empty($lead['phone'])): ?>
+                                    <?php echo htmlspecialchars($lead['phone']); ?>
+                                <?php else: ?>
+                                    <span class="text-muted">No phone</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo get_relative_time($lead['created_at']); ?></td>
+                            <td>
+                                <?php 
+                                $status_config = [
+                                    'NEW' => 'info',
+                                    'CONTACTED' => 'warning',
+                                    'QUALIFIED' => 'warning',
+                                    'CONVERTED' => 'success',
+                                    'LOST' => 'danger'
+                                ];
+                                echo get_status_badge($lead['status'], $status_config);
+                                ?>
+                            </td>
+                            <td>
+                                <span class="badge badge-secondary">
+                                    <?php echo htmlspecialchars($lead['source'] ?? 'website'); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/leads/view.php?id=<?php echo urlencode($lead['id']); ?>" 
+                                       class="btn btn-sm btn-primary"
+                                       title="View lead details">
                                         View
                                     </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <?php if ($total_pages > 1): ?>
+            <div class="admin-card-footer">
+                <?php 
+                $base_url = get_app_base_url() . '/admin/leads.php';
+                $query_params = [];
+                if (!empty($status_filter)) {
+                    $query_params[] = 'status=' . urlencode($status_filter);
+                }
+                if (!empty($search_query)) {
+                    $query_params[] = 'search=' . urlencode($search_query);
+                }
+                if (!empty($query_params)) {
+                    $base_url .= '?' . implode('&', $query_params);
+                }
+                render_admin_pagination($page, $total_pages, $base_url);
+                ?>
             </div>
+        <?php endif; ?>
+        
+        <div class="admin-card-footer">
+            <p class="admin-card-footer-text">
+                Showing <?php echo count($leads); ?> of <?php echo $total_leads; ?> lead<?php echo $total_leads !== 1 ? 's' : ''; ?>
+            </p>
         </div>
     <?php endif; ?>
 </div>
 
 <style>
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1;
-    text-align: center;
+.admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-6);
+    gap: var(--spacing-4);
+}
+
+.admin-page-header-content {
+    flex: 1;
+}
+
+.admin-page-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-gray-900);
+    margin: 0 0 var(--spacing-2) 0;
+}
+
+.admin-page-description {
+    font-size: var(--font-size-base);
+    color: var(--color-gray-600);
+    margin: 0;
+}
+
+.admin-filters-section {
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+.admin-filters-form {
+    display: flex;
+    gap: var(--spacing-4);
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.admin-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    flex: 1;
+    min-width: 200px;
+}
+
+.admin-filter-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-700);
+}
+
+.admin-filter-input,
+.admin-filter-select {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    color: var(--color-gray-900);
+}
+
+.admin-filter-input:focus,
+.admin-filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-filter-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+/* Table Layout */
+.admin-table-container {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.admin-table th,
+.admin-table td {
     white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.375rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
 }
 
-.badge-primary {
-    background-color: #3b82f6;
-    color: white;
+/* Column widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) { width: 200px; } /* Lead */
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) { width: 150px; } /* Company */
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) { width: 120px; } /* Contact Info */
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) { width: 120px; } /* Date Received */
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) { width: 110px; } /* Lead Status */
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) { width: 100px; } /* Source */
+
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) { width: 90px; } /* Actions */
+
+.table-cell-primary {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.badge-info {
-    background-color: #06b6d4;
-    color: white;
+.table-cell-secondary {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.badge-warning {
-    background-color: #f59e0b;
-    color: white;
+.text-muted {
+    color: var(--color-gray-500);
+    font-style: italic;
 }
 
-.badge-success {
-    background-color: #10b981;
-    color: white;
+.table-actions {
+    display: flex;
+    gap: var(--spacing-2);
 }
 
-.badge-danger {
-    background-color: #ef4444;
-    color: white;
+.admin-card-footer {
+    padding: var(--spacing-4);
+    border-top: 1px solid var(--color-gray-200);
 }
 
-.badge-secondary {
-    background-color: #6b7280;
-    color: white;
+.admin-card-footer-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+    margin: 0;
+}
+
+@media (max-width: 1200px) {
+    .admin-table {
+        table-layout: auto;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-page-header {
+        flex-direction: column;
+    }
+    
+    .admin-filters-form {
+        flex-direction: column;
+    }
+    
+    .admin-filter-group {
+        width: 100%;
+    }
 }
 </style>
 
-<?php
-// Include admin footer
-include __DIR__ . '/../templates/admin-footer.php';
-?>
+<?php include_admin_footer(); ?>

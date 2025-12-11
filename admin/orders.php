@@ -16,8 +16,9 @@ use Karyalay\Models\User;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and orders.view permission
 require_admin();
+require_permission('orders.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -30,6 +31,7 @@ $userModel = new User();
 // Get filters from query parameters
 $status_filter = $_GET['status'] ?? '';
 $plan_filter = $_GET['plan'] ?? '';
+$customer_filter = $_GET['customer'] ?? '';
 $date_from = $_GET['date_from'] ?? '';
 $date_to = $_GET['date_to'] ?? '';
 $search_query = $_GET['search'] ?? '';
@@ -54,6 +56,11 @@ if (!empty($plan_filter)) {
     $count_params[':plan_id'] = $plan_filter;
 }
 
+if (!empty($customer_filter)) {
+    $count_sql .= " AND customer_id = :customer_id";
+    $count_params[':customer_id'] = $customer_filter;
+}
+
 if (!empty($date_from)) {
     $count_sql .= " AND DATE(created_at) >= :date_from";
     $count_params[':date_from'] = $date_from;
@@ -67,7 +74,7 @@ if (!empty($date_to)) {
 if (!empty($search_query)) {
     $count_sql .= " AND id IN (SELECT o.id FROM orders o 
                     LEFT JOIN users u ON o.customer_id = u.id 
-                    WHERE u.name LIKE :search OR u.email LIKE :search OR o.id LIKE :search OR o.payment_gateway_id LIKE :search)";
+                    WHERE u.name LIKE :search OR u.email LIKE :search OR o.id LIKE :search OR o.pg_order_id LIKE :search OR o.pg_payment_id LIKE :search)";
     $count_params[':search'] = '%' . $search_query . '%';
 }
 
@@ -85,7 +92,8 @@ try {
 // Build query for fetching orders with joins
 $sql = "SELECT o.*, 
         p.name as plan_name,
-        p.price as plan_price,
+        p.mrp as plan_mrp,
+        p.discounted_price as plan_discounted_price,
         p.currency as plan_currency,
         u.name as customer_name,
         u.email as customer_email
@@ -105,6 +113,11 @@ if (!empty($plan_filter)) {
     $params[':plan_id'] = $plan_filter;
 }
 
+if (!empty($customer_filter)) {
+    $sql .= " AND o.customer_id = :customer_id";
+    $params[':customer_id'] = $customer_filter;
+}
+
 if (!empty($date_from)) {
     $sql .= " AND DATE(o.created_at) >= :date_from";
     $params[':date_from'] = $date_from;
@@ -116,7 +129,7 @@ if (!empty($date_to)) {
 }
 
 if (!empty($search_query)) {
-    $sql .= " AND (u.name LIKE :search OR u.email LIKE :search OR o.id LIKE :search OR o.payment_gateway_id LIKE :search)";
+    $sql .= " AND (u.name LIKE :search OR u.email LIKE :search OR o.id LIKE :search OR o.pg_order_id LIKE :search OR o.pg_payment_id LIKE :search)";
     $params[':search'] = '%' . $search_query . '%';
 }
 
@@ -140,18 +153,26 @@ try {
 
 // Include admin header
 include_admin_header('Orders');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <h1 class="admin-page-title">Order Management</h1>
         <p class="admin-page-description">View and manage all transactions</p>
     </div>
+    <div class="admin-page-header-actions">
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-orders.php'); ?>
+    </div>
 </div>
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="/admin/orders.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/orders.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -212,7 +233,7 @@ include_admin_header('Orders');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="/karyalayportal/admin/orders.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/orders.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -238,6 +259,7 @@ include_admin_header('Orders');
                         <th>Customer</th>
                         <th>Plan</th>
                         <th>Amount</th>
+                        <th>PG Details</th>
                         <th>Payment Status</th>
                         <th>Payment Method</th>
                         <th>Actions</th>
@@ -248,11 +270,6 @@ include_admin_header('Orders');
                         <tr>
                             <td>
                                 <code class="code-inline"><?php echo htmlspecialchars(substr($order['id'], 0, 8)); ?></code>
-                                <?php if ($order['payment_gateway_id']): ?>
-                                    <div class="table-cell-secondary">
-                                        Gateway: <?php echo htmlspecialchars(substr($order['payment_gateway_id'], 0, 12)); ?>...
-                                    </div>
-                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="table-cell-primary">
@@ -287,6 +304,24 @@ include_admin_header('Orders');
                                     <span class="amount"><?php echo number_format($order['amount'], 2); ?></span>
                                 </div>
                             </td>
+                            <td>
+                                <?php if ($order['pg_order_id'] || $order['pg_payment_id']): ?>
+                                    <div class="table-cell-primary">
+                                        <?php if ($order['pg_order_id']): ?>
+                                            <div class="pg-detail-label">Order:</div>
+                                            <code class="code-inline"><?php echo htmlspecialchars(substr($order['pg_order_id'], 0, 20)); ?></code>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="table-cell-secondary" style="margin-top: 4px;">
+                                        <?php if ($order['pg_payment_id']): ?>
+                                            <div class="pg-detail-label">Payment:</div>
+                                            <code class="code-inline"><?php echo htmlspecialchars(substr($order['pg_payment_id'], 0, 20)); ?></code>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo get_status_badge($order['status']); ?></td>
                             <td>
                                 <?php if ($order['payment_method']): ?>
@@ -299,11 +334,18 @@ include_admin_header('Orders');
                             </td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="/karyalayportal/admin/customers/view.php?id=<?php echo urlencode($order['customer_id']); ?>" 
-                                       class="btn btn-sm btn-secondary"
-                                       title="View customer">
-                                        View Customer
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/orders/view.php?id=<?php echo urlencode($order['id']); ?>" 
+                                       class="btn btn-sm btn-primary"
+                                       title="View order details">
+                                        View
                                     </a>
+                                    <?php if ($order['status'] === 'SUCCESS'): ?>
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/invoices/view.php?order_id=<?php echo urlencode($order['id']); ?>" 
+                                       class="btn btn-sm btn-secondary"
+                                       title="View invoice">
+                                        Invoice
+                                    </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -316,13 +358,16 @@ include_admin_header('Orders');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = '/admin/orders.php';
+                $base_url = get_app_base_url() . '/admin/orders.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);
                 }
                 if (!empty($plan_filter)) {
                     $query_params[] = 'plan=' . urlencode($plan_filter);
+                }
+                if (!empty($customer_filter)) {
+                    $query_params[] = 'customer=' . urlencode($customer_filter);
                 }
                 if (!empty($date_from)) {
                     $query_params[] = 'date_from=' . urlencode($date_from);
@@ -425,15 +470,73 @@ include_admin_header('Orders');
     gap: var(--spacing-2);
 }
 
+/* Table Layout */
+.admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+    width: 100%;
+    min-width: 915px; /* Sum of all column widths to prevent compression */
+    table-layout: fixed;
+}
+
+.admin-table th,
+.admin-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Column widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) { width: 80px; } /* Order ID */
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) { width: 95px; white-space: normal; } /* Date */
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) { width: 150px; } /* Customer */
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) { width: 90px; } /* Plan */
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) { width: 85px; } /* Amount */
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) { width: 120px; } /* Payment ID */
+
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) { width: 90px; } /* Status */
+
+.admin-table th:nth-child(8),
+.admin-table td:nth-child(8) { width: 75px; } /* Method */
+
+.admin-table th:nth-child(9),
+.admin-table td:nth-child(9) { 
+    width: 130px; 
+    min-width: 130px;
+    white-space: nowrap;
+} /* Actions - Increased for two buttons */
+
 .table-cell-primary {
     font-weight: var(--font-weight-semibold);
     color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .table-cell-secondary {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
-    margin-top: var(--spacing-1);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .code-inline {
@@ -441,8 +544,21 @@ include_admin_header('Orders');
     padding: 2px 6px;
     border-radius: var(--radius-sm);
     font-family: 'Courier New', monospace;
-    font-size: var(--font-size-sm);
+    font-size: 11px;
     color: var(--color-gray-800);
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pg-detail-label {
+    font-size: 10px;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
 }
 
 .text-muted {
@@ -453,7 +569,8 @@ include_admin_header('Orders');
 .amount-display {
     display: flex;
     align-items: baseline;
-    gap: var(--spacing-1);
+    gap: 2px;
+    white-space: nowrap;
 }
 
 .currency {
@@ -475,17 +592,44 @@ include_admin_header('Orders');
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     color: var(--color-gray-700);
+    text-transform: capitalize;
 }
 
 .table-actions {
     display: flex;
-    gap: var(--spacing-2);
+    gap: var(--spacing-1);
+    flex-wrap: nowrap;
+}
+
+.table-actions .btn-sm {
+    font-size: 11px;
+    padding: 4px 8px;
+    white-space: nowrap;
 }
 
 .admin-card-footer-text {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
     margin: 0;
+}
+
+@media (max-width: 1200px) {
+    .admin-table {
+        table-layout: auto;
+        min-width: 1000px; /* Ensure minimum width to prevent button overflow */
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        white-space: normal;
+    }
+    
+    /* Adjust column widths for medium screens */
+    .admin-table th:nth-child(9),
+    .admin-table td:nth-child(9) { 
+        width: 120px; 
+        min-width: 120px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -499,10 +643,6 @@ include_admin_header('Orders');
     
     .admin-filter-group {
         width: 100%;
-    }
-    
-    .admin-table-container {
-        overflow-x: auto;
     }
 }
 </style>

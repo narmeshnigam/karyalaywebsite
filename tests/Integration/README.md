@@ -1,6 +1,6 @@
 # Integration Tests
 
-This directory contains integration tests for the Karyalay Portal System. Integration tests validate end-to-end workflows and external service integrations.
+This directory contains integration tests for the SellerPortal System. Integration tests validate end-to-end workflows and external service integrations.
 
 ## Test Suites
 

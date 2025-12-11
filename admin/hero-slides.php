@@ -12,6 +12,7 @@ use Karyalay\Models\HeroSlide;
 
 startSecureSession();
 require_admin();
+require_permission('hero_slides.manage');
 
 $heroSlideModel = new HeroSlide();
 
@@ -45,8 +46,7 @@ include_admin_header('Hero Slides');
         <p class="admin-page-description">Manage home page hero slider content</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/hero-slides/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides/new.php" class="btn btn-primary">
             Add New Slide
         </a>
     </div>
@@ -54,7 +54,7 @@ include_admin_header('Hero Slides');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -79,7 +79,7 @@ include_admin_header('Hero Slides');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -142,9 +142,9 @@ include_admin_header('Hero Slides');
                             <td><?php echo get_relative_time($slide['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/hero-slides/edit.php?id=<?php echo urlencode($slide['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides/edit.php?id=<?php echo urlencode($slide['id']); ?>" 
                                        class="btn btn-sm btn-secondary">Edit</a>
-                                    <a href="<?php echo get_base_url(); ?>/admin/hero-slides/delete.php?id=<?php echo urlencode($slide['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides/delete.php?id=<?php echo urlencode($slide['id']); ?>" 
                                        class="btn btn-sm btn-text btn-danger"
                                        onclick="return confirm('Are you sure you want to delete this slide?');">Delete</a>
                                 </div>
@@ -296,11 +296,15 @@ include_admin_header('Hero Slides');
 }
 
 .btn-danger {
-    color: #dc2626;
+    background-color: #dc2626 !important;
+    color: white !important;
+    border: 1px solid #dc2626 !important;
 }
 
 .btn-danger:hover {
-    background-color: #fee2e2;
+    background-color: #991b1b !important;
+    border-color: #991b1b !important;
+    color: white !important;
 }
 
 .admin-card-footer {

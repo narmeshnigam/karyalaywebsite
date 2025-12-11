@@ -1,6 +1,6 @@
 # Bin Scripts
 
-This directory contains utility scripts for managing and monitoring the Karyalay Portal System.
+This directory contains utility scripts for managing and monitoring the SellerPortal System.
 
 ## Available Scripts
 

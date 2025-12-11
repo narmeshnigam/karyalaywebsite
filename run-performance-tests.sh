@@ -4,7 +4,7 @@
 # Runs all performance tests and generates a summary report
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "         KARYALAY PORTAL SYSTEM - PERFORMANCE TESTS            "
+echo "         SellerPortal SYSTEM - PERFORMANCE TESTS            "
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 echo "Starting performance test suite..."

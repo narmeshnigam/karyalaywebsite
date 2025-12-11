@@ -203,7 +203,7 @@ if (!isset($isComplete)) {
             <div class="complete-icon">✓</div>
             <h2>Installation Complete!</h2>
             <p class="complete-message">
-                Your Karyalay Portal System has been successfully installed and configured.
+                Your portal system has been successfully installed and configured.
             </p>
             
             <?php if (isset($_SESSION['admin_email'])): ?>

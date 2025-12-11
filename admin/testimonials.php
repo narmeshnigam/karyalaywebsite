@@ -12,6 +12,7 @@ use Karyalay\Models\Testimonial;
 
 startSecureSession();
 require_admin();
+require_permission('testimonials.manage');
 
 $testimonialModel = new Testimonial();
 
@@ -40,7 +41,7 @@ include_admin_header('Testimonials');
         <p class="admin-page-description">Manage customer testimonials and reviews</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/testimonials/new.php" class="btn btn-primary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/testimonials/new.php" class="btn btn-primary">
             + Add Testimonial
         </a>
     </div>
@@ -96,7 +97,7 @@ include_admin_header('Testimonials');
                 <?php if (empty($testimonials)): ?>
                     <tr>
                         <td colspan="8" class="text-center">
-                            <p class="empty-state">No testimonials found. <a href="<?php echo get_base_url(); ?>/admin/testimonials/new.php">Add your first testimonial</a></p>
+                            <p class="empty-state">No testimonials found. <a href="<?php echo get_app_base_url(); ?>/admin/testimonials/new.php">Add your first testimonial</a></p>
                         </td>
                     </tr>
                 <?php else: ?>
@@ -146,7 +147,7 @@ include_admin_header('Testimonials');
                             <td><?php echo htmlspecialchars($testimonial['display_order']); ?></td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="<?php echo get_base_url(); ?>/admin/testimonials/edit.php?id=<?php echo urlencode($testimonial['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/testimonials/edit.php?id=<?php echo urlencode($testimonial['id']); ?>" 
                                        class="btn btn-sm btn-secondary">Edit</a>
                                 </div>
                             </td>

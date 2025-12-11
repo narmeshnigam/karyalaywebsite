@@ -124,15 +124,15 @@ include_header($page_title);
                         
                         <!-- Phone Field (Optional) -->
                         <div class="form-group">
-                            <label for="phone" class="form-label">
+                            <label for="phone-input" class="form-label">
                                 Phone
                             </label>
-                            <input type="tel" 
-                                   id="phone" 
-                                   name="phone" 
-                                   class="form-control"
-                                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>"
-                                   aria-describedby="phone-help">
+                            <?php echo render_phone_input([
+                                'id' => 'phone',
+                                'name' => 'phone',
+                                'value' => $_POST['phone'] ?? '',
+                                'required' => false,
+                            ]); ?>
                             <small id="phone-help" class="form-help">
                                 Optional: Include your phone number if you'd like us to call you.
                             </small>

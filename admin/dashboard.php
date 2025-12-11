@@ -11,8 +11,9 @@ require_once __DIR__ . '/../includes/admin_helpers.php';
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and dashboard.view permission
 require_admin();
+require_permission('dashboard.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -51,6 +52,10 @@ try {
     $stmt = $db->query("SELECT COUNT(*) as count FROM subscriptions WHERE status = 'ACTIVE' AND end_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)");
     $expiring_subscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
     
+    // Total invoices (successful orders)
+    $stmt = $db->query("SELECT COUNT(*) as count FROM orders WHERE status = 'SUCCESS'");
+    $total_invoices = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
     // Recent activity - latest orders
     $stmt = $db->prepare("
         SELECT o.id, o.amount, o.status, o.created_at, u.name as customer_name, p.name as plan_name
@@ -84,6 +89,7 @@ try {
     $new_leads = 0;
     $pending_orders = 0;
     $expiring_subscriptions = 0;
+    $total_invoices = 0;
     $recent_orders = [];
     $recent_tickets = [];
 }
@@ -96,13 +102,13 @@ include_admin_header('Dashboard');
     <!-- Overview Cards -->
     <div class="admin-dashboard-grid">
         <?php 
-        $base = get_base_url();
+        $base = get_app_base_url();
         
         render_admin_card(
             'Total Customers',
             format_number($total_customers),
             'Registered customer accounts',
-            '👥',
+            '',
             $base . '/admin/customers.php',
             'View all customers'
         );
@@ -111,7 +117,7 @@ include_admin_header('Dashboard');
             'Active Subscriptions',
             format_number($active_subscriptions),
             'Currently active subscriptions',
-            '📅',
+            '',
             $base . '/admin/subscriptions.php',
             'View subscriptions'
         );
@@ -120,7 +126,7 @@ include_admin_header('Dashboard');
             'Total Revenue',
             format_currency($total_revenue),
             'All-time revenue from orders',
-            '💰',
+            '',
             $base . '/admin/orders.php',
             'View orders'
         );
@@ -129,7 +135,7 @@ include_admin_header('Dashboard');
             'Available Ports',
             format_number($available_ports),
             'Ports ready for allocation',
-            '🔌',
+            '',
             $base . '/admin/ports.php',
             'Manage ports'
         );
@@ -138,7 +144,7 @@ include_admin_header('Dashboard');
             'Open Tickets',
             format_number($open_tickets),
             'Tickets requiring attention',
-            '🎫',
+            '',
             $base . '/admin/support/tickets.php',
             'View tickets'
         );
@@ -147,7 +153,7 @@ include_admin_header('Dashboard');
             'New Leads',
             format_number($new_leads),
             'Leads in the last 30 days',
-            '📧',
+            '',
             $base . '/admin/leads.php',
             'View leads'
         );
@@ -162,21 +168,21 @@ include_admin_header('Dashboard');
                 <?php if ($pending_orders > 0): ?>
                     <div class="alert alert-warning">
                         <strong>Pending Orders:</strong> <?php echo $pending_orders; ?> order(s) are pending payment confirmation.
-                        <a href="<?php echo get_base_url(); ?>/admin/orders.php?status=PENDING">View pending orders →</a>
+                        <a href="<?php echo get_app_base_url(); ?>/admin/orders.php?status=PENDING">View pending orders →</a>
                     </div>
                 <?php endif; ?>
                 
                 <?php if ($expiring_subscriptions > 0): ?>
                     <div class="alert alert-info">
                         <strong>Expiring Soon:</strong> <?php echo $expiring_subscriptions; ?> subscription(s) will expire in the next 30 days.
-                        <a href="<?php echo get_base_url(); ?>/admin/subscriptions.php?expiring=30">View expiring subscriptions →</a>
+                        <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions.php?expiring=30">View expiring subscriptions →</a>
                     </div>
                 <?php endif; ?>
                 
                 <?php if ($available_ports < 10): ?>
                     <div class="alert alert-danger">
                         <strong>Low Port Availability:</strong> Only <?php echo $available_ports; ?> port(s) available. Consider adding more ports.
-                        <a href="<?php echo get_base_url(); ?>/admin/ports.php">Manage ports →</a>
+                        <a href="<?php echo get_app_base_url(); ?>/admin/ports.php">Manage ports →</a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -190,7 +196,7 @@ include_admin_header('Dashboard');
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h3 class="admin-card-title">Recent Orders</h3>
-                    <a href="<?php echo get_base_url(); ?>/admin/orders.php" class="admin-card-link">View all →</a>
+                    <a href="<?php echo get_app_base_url(); ?>/admin/orders.php" class="admin-card-link">View all →</a>
                 </div>
                 
                 <?php if (empty($recent_orders)): ?>
@@ -209,7 +215,7 @@ include_admin_header('Dashboard');
                             </thead>
                             <tbody>
                                 <?php foreach ($recent_orders as $order): ?>
-                                    <tr data-href="<?php echo get_base_url(); ?>/admin/orders/<?php echo $order['id']; ?>">
+                                    <tr data-href="<?php echo get_app_base_url(); ?>/admin/orders/<?php echo $order['id']; ?>">
                                         <td><?php echo htmlspecialchars($order['customer_name']); ?></td>
                                         <td><?php echo htmlspecialchars($order['plan_name']); ?></td>
                                         <td><?php echo format_currency($order['amount']); ?></td>
@@ -227,7 +233,7 @@ include_admin_header('Dashboard');
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h3 class="admin-card-title">Recent Tickets</h3>
-                    <a href="<?php echo get_base_url(); ?>/admin/support/tickets.php" class="admin-card-link">View all →</a>
+                    <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets.php" class="admin-card-link">View all →</a>
                 </div>
                 
                 <?php if (empty($recent_tickets)): ?>
@@ -246,7 +252,7 @@ include_admin_header('Dashboard');
                             </thead>
                             <tbody>
                                 <?php foreach ($recent_tickets as $ticket): ?>
-                                    <tr data-href="<?php echo get_base_url(); ?>/admin/support/tickets/<?php echo $ticket['id']; ?>">
+                                    <tr data-href="<?php echo get_app_base_url(); ?>/admin/support/tickets/<?php echo $ticket['id']; ?>">
                                         <td><?php echo htmlspecialchars($ticket['subject']); ?></td>
                                         <td><?php echo htmlspecialchars($ticket['customer_name']); ?></td>
                                         <td><?php echo get_status_badge($ticket['priority']); ?></td>

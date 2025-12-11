@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This document provides comprehensive instructions for deploying the Karyalay Portal System to staging and production environments.
+This document provides comprehensive instructions for deploying the SellerPortal System to staging and production environments.
 
 ## Table of Contents
 

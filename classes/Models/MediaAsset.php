@@ -23,7 +23,7 @@ class MediaAsset
     /**
      * Create a new media asset
      * 
-     * @param array $data Media asset data (filename, url, mime_type, size, uploaded_by)
+     * @param array $data Media asset data (filename, url, file_path, mime_type, size, uploaded_by)
      * @return array|false Returns media asset data with id on success, false on failure
      */
     public function create(array $data)
@@ -32,9 +32,9 @@ class MediaAsset
             $id = $this->generateUuid();
 
             $sql = "INSERT INTO media_assets (
-                id, filename, url, mime_type, size, uploaded_by
+                id, filename, url, file_path, mime_type, size, uploaded_by
             ) VALUES (
-                :id, :filename, :url, :mime_type, :size, :uploaded_by
+                :id, :filename, :url, :file_path, :mime_type, :size, :uploaded_by
             )";
 
             $stmt = $this->db->prepare($sql);
@@ -42,6 +42,7 @@ class MediaAsset
                 ':id' => $id,
                 ':filename' => $data['filename'],
                 ':url' => $data['url'],
+                ':file_path' => $data['file_path'] ?? null,
                 ':mime_type' => $data['mime_type'],
                 ':size' => $data['size'],
                 ':uploaded_by' => $data['uploaded_by']
@@ -85,7 +86,7 @@ class MediaAsset
     public function update(string $id, array $data): bool
     {
         try {
-            $allowedFields = ['filename', 'url', 'mime_type', 'size'];
+            $allowedFields = ['filename', 'url', 'file_path', 'mime_type', 'size'];
             $updateFields = [];
             $params = [':id' => $id];
 

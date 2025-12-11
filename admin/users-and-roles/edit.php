@@ -1,6 +1,7 @@
 <?php
 /**
  * Edit Admin User Page
+ * Supports multiple roles per user
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
@@ -9,9 +10,11 @@ require_once __DIR__ . '/../../includes/admin_helpers.php';
 require_once __DIR__ . '/../../includes/template_helpers.php';
 
 use Karyalay\Models\User;
+use Karyalay\Services\RoleService;
 
 startSecureSession();
 require_admin();
+require_permission('users.edit');
 
 $db = \Karyalay\Database\Connection::getInstance();
 $userModel = new User();
@@ -20,17 +23,27 @@ $userModel = new User();
 $user_id = $_GET['id'] ?? '';
 if (empty($user_id)) {
     $_SESSION['admin_error'] = 'User ID is required.';
-    header('Location: ' . get_base_url() . '/admin/users-and-roles.php');
+    header('Location: ' . get_app_base_url() . '/admin/users-and-roles.php');
     exit;
 }
 
 // Fetch user data
 $user = $userModel->findById($user_id);
-if (!$user || !in_array($user['role'], ['ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'])) {
-    $_SESSION['admin_error'] = 'Admin user not found.';
-    header('Location: ' . get_base_url() . '/admin/users-and-roles.php');
+if (!$user) {
+    $_SESSION['admin_error'] = 'User not found.';
+    header('Location: ' . get_app_base_url() . '/admin/users-and-roles.php');
     exit;
 }
+
+// Check if user is editing themselves (cannot edit own roles)
+$isEditingSelf = ($user_id === $_SESSION['user_id']);
+
+// Get user's current roles
+$userRoles = RoleService::getUserRoles($user_id);
+
+// Get all available admin roles
+$allRoles = RoleService::getRoles();
+$adminRoles = RoleService::getAdminRoles();
 
 // Generate CSRF token
 if (!isset($_SESSION['csrf_token'])) {
@@ -44,8 +57,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        $role = $_POST['role'] ?? 'ADMIN';
+        $selectedRoles = $_POST['roles'] ?? [];
         $password = $_POST['password'] ?? '';
+        
+        // If editing self, keep current roles (cannot change own roles)
+        if ($isEditingSelf) {
+            $selectedRoles = array_filter($userRoles, function($role) {
+                return $role !== 'CUSTOMER'; // Remove CUSTOMER as it's auto-added
+            });
+        } else {
+            // Ensure roles is an array
+            if (!is_array($selectedRoles)) {
+                $selectedRoles = [$selectedRoles];
+            }
+            
+            // Filter to only valid roles
+            $selectedRoles = array_filter($selectedRoles, function($role) use ($allRoles) {
+                return isset($allRoles[$role]);
+            });
+        }
         
         if (empty($name) || empty($email)) {
             $_SESSION['admin_error'] = 'Name and email are required.';
@@ -53,32 +83,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_error'] = 'Invalid email format.';
         } elseif (!empty($password) && strlen($password) < 8) {
             $_SESSION['admin_error'] = 'Password must be at least 8 characters.';
-        } elseif (!in_array($role, ['ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR'])) {
-            $_SESSION['admin_error'] = 'Invalid role selected.';
+        } elseif (empty($selectedRoles) && !$isEditingSelf) {
+            $_SESSION['admin_error'] = 'At least one role must be selected.';
         } else {
             // Check if email exists for another user
             $existingUser = $userModel->findByEmail($email);
             if ($existingUser && $existingUser['id'] !== $user_id) {
                 $_SESSION['admin_error'] = 'Email already exists for another user.';
             } else {
+                // Determine primary role (first non-CUSTOMER role)
+                $primaryRole = 'CUSTOMER';
+                foreach ($selectedRoles as $role) {
+                    if ($role !== 'CUSTOMER') {
+                        $primaryRole = $role;
+                        break;
+                    }
+                }
+                
                 $updateData = [
                     'name' => $name,
                     'email' => $email,
-                    'role' => $role
+                    'role' => $primaryRole
                 ];
                 
                 if (!empty($password)) {
-                    $updateData['password'] = password_hash($password, PASSWORD_DEFAULT);
+                    $updateData['password'] = $password;
                 }
                 
                 $result = $userModel->update($user_id, $updateData);
                 
                 if ($result) {
-                    $_SESSION['admin_success'] = 'Admin user updated successfully!';
-                    header('Location: ' . get_base_url() . '/admin/users-and-roles.php');
+                    // Update roles in user_roles table
+                    RoleService::setUserRoles($user_id, $selectedRoles, $_SESSION['user_id']);
+                    
+                    $_SESSION['admin_success'] = 'User updated successfully!';
+                    header('Location: ' . get_app_base_url() . '/admin/users-and-roles.php');
                     exit;
                 } else {
-                    $_SESSION['admin_error'] = 'Failed to update admin user. Please try again.';
+                    $_SESSION['admin_error'] = 'Failed to update user. Please try again.';
                 }
             }
         }
@@ -86,20 +128,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Refresh user data after failed update
     $user = $userModel->findById($user_id);
+    $userRoles = RoleService::getUserRoles($user_id);
 }
 
-include_admin_header('Edit Admin User');
+include_admin_header('Edit User');
 ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/users-and-roles.php">Users & Roles</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php">Users & Roles</a>
             <span class="breadcrumb-separator">/</span>
-            <span>Edit Admin User</span>
+            <span>Edit User</span>
         </nav>
-        <h1 class="admin-page-title">Edit Admin User</h1>
-        <p class="admin-page-description">Update administrator details</p>
+        <h1 class="admin-page-title">Edit User</h1>
+        <p class="admin-page-description">Update user details and roles</p>
     </div>
 </div>
 
@@ -111,7 +154,7 @@ include_admin_header('Edit Admin User');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/users-and-roles/edit.php?id=<?php echo urlencode($user_id); ?>" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/users-and-roles/edit.php?id=<?php echo urlencode($user_id); ?>" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
         
         <div class="form-row">
@@ -134,36 +177,45 @@ include_admin_header('Edit Admin User');
                 <input type="password" id="password" name="password" class="form-input" minlength="8">
                 <p class="form-help">Leave blank to keep current password. Minimum 8 characters if changing.</p>
             </div>
-            
-            <div class="form-group">
-                <label for="role" class="form-label">Role <span class="required">*</span></label>
-                <select id="role" name="role" class="form-input" required>
-                    <option value="ADMIN" <?php echo $user['role'] === 'ADMIN' ? 'selected' : ''; ?>>Admin</option>
-                    <option value="SUPPORT" <?php echo $user['role'] === 'SUPPORT' ? 'selected' : ''; ?>>Support</option>
-                    <option value="SALES" <?php echo $user['role'] === 'SALES' ? 'selected' : ''; ?>>Sales</option>
-                    <option value="CONTENT_EDITOR" <?php echo $user['role'] === 'CONTENT_EDITOR' ? 'selected' : ''; ?>>Content Editor</option>
-                </select>
-            </div>
         </div>
         
-        <div class="role-permissions-card">
-            <h3>Role Permissions</h3>
-            <div class="role-permission" data-role="ADMIN">
-                <strong>Admin:</strong> Full system access including user management, settings, and all administrative functions.
-            </div>
-            <div class="role-permission" data-role="SUPPORT">
-                <strong>Support:</strong> Access to tickets, customer support features, and customer information.
-            </div>
-            <div class="role-permission" data-role="SALES">
-                <strong>Sales:</strong> Access to leads, customers, orders, and sales-related features.
-            </div>
-            <div class="role-permission" data-role="CONTENT_EDITOR">
-                <strong>Content Editor:</strong> Access to content management including blog, solutions, and features.
+        <div class="form-group">
+            <label class="form-label">Roles <span class="required">*</span></label>
+            <?php if ($isEditingSelf): ?>
+                <div class="alert alert-warning" style="margin-bottom: 12px;">
+                    <strong>Note:</strong> You cannot modify your own roles. Please ask another administrator to change your roles if needed.
+                </div>
+            <?php else: ?>
+                <p class="form-help" style="margin-bottom: 12px;">Select one or more roles. All users automatically have the CUSTOMER role.</p>
+            <?php endif; ?>
+            
+            <div class="roles-grid <?php echo $isEditingSelf ? 'roles-disabled' : ''; ?>">
+                <?php foreach ($allRoles as $roleName => $roleData): ?>
+                    <?php if ($roleName === 'CUSTOMER') continue; // Skip CUSTOMER as it's automatic ?>
+                    <div class="role-checkbox-card <?php echo in_array($roleName, $userRoles) ? 'selected' : ''; ?> <?php echo $isEditingSelf ? 'disabled' : ''; ?>">
+                        <label class="role-checkbox-label">
+                            <input type="checkbox" name="roles[]" value="<?php echo htmlspecialchars($roleName); ?>"
+                                <?php echo in_array($roleName, $userRoles) ? 'checked' : ''; ?>
+                                <?php echo $isEditingSelf ? 'disabled' : ''; ?>>
+                            <div class="role-checkbox-content">
+                                <div class="role-checkbox-header">
+                                    <span class="role-checkbox-name"><?php echo htmlspecialchars($roleData['label']); ?></span>
+                                    <?php echo get_role_badge($roleName); ?>
+                                </div>
+                                <p class="role-checkbox-desc"><?php echo htmlspecialchars($roleData['description']); ?></p>
+                            </div>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
         
         <div class="user-info-card">
             <h3>User Information</h3>
+            <div class="info-row">
+                <span class="info-label">User ID:</span>
+                <span class="info-value"><code><?php echo htmlspecialchars($user['id']); ?></code></span>
+            </div>
             <div class="info-row">
                 <span class="info-label">Created:</span>
                 <span class="info-value"><?php echo date('M j, Y g:i A', strtotime($user['created_at'])); ?></span>
@@ -178,10 +230,22 @@ include_admin_header('Edit Admin User');
                     <?php endif; ?>
                 </span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Current Roles:</span>
+                <span class="info-value">
+                    <?php 
+                    $displayRoles = array_filter($userRoles, function($r) { return $r !== 'CUSTOMER'; });
+                    if (empty($displayRoles)) $displayRoles = ['CUSTOMER'];
+                    foreach ($displayRoles as $role): 
+                    ?>
+                        <?php echo get_role_badge($role); ?>
+                    <?php endforeach; ?>
+                </span>
+            </div>
         </div>
         
         <div class="form-actions">
-            <a href="<?php echo get_base_url(); ?>/admin/users-and-roles.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php" class="btn btn-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">Update User</button>
         </div>
     </form>
@@ -217,6 +281,7 @@ include_admin_header('Edit Admin User');
 .form-group {
     display: flex;
     flex-direction: column;
+    margin-bottom: 20px;
 }
 .form-label {
     font-weight: 600;
@@ -242,7 +307,95 @@ include_admin_header('Edit Admin User');
     color: var(--color-gray-500);
     margin-top: 4px;
 }
-.role-permissions-card,
+
+/* Roles Grid */
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.role-checkbox-card {
+    border: 2px solid var(--color-gray-200);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.role-checkbox-card:hover {
+    border-color: var(--color-gray-300);
+    background: var(--color-gray-50);
+}
+
+.role-checkbox-card.selected {
+    border-color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.role-checkbox-label {
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.role-checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.role-checkbox-content {
+    flex: 1;
+}
+
+.role-checkbox-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.role-checkbox-name {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.role-checkbox-desc {
+    font-size: 13px;
+    color: var(--color-gray-600);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Disabled roles state (when editing self) */
+.roles-grid.roles-disabled {
+    opacity: 0.7;
+}
+
+.role-checkbox-card.disabled {
+    cursor: not-allowed;
+    background: var(--color-gray-100);
+}
+
+.role-checkbox-card.disabled .role-checkbox-label {
+    cursor: not-allowed;
+}
+
+.role-checkbox-card.disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
 .user-info-card {
     background: var(--color-gray-50);
     border: 1px solid var(--color-gray-200);
@@ -250,29 +403,16 @@ include_admin_header('Edit Admin User');
     padding: 16px;
     margin-bottom: 24px;
 }
-.role-permissions-card h3,
 .user-info-card h3 {
     font-size: 14px;
     font-weight: 600;
     margin: 0 0 12px 0;
     color: var(--color-gray-700);
 }
-.role-permission {
-    font-size: 13px;
-    color: var(--color-gray-600);
-    padding: 8px 0;
-    border-bottom: 1px solid var(--color-gray-200);
-    display: none;
-}
-.role-permission:last-child {
-    border-bottom: none;
-}
-.role-permission.active {
-    display: block;
-}
 .info-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid var(--color-gray-200);
 }
@@ -287,6 +427,13 @@ include_admin_header('Edit Admin User');
     font-size: 13px;
     color: var(--color-gray-900);
 }
+.info-value code {
+    background: var(--color-gray-100);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+}
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -294,8 +441,17 @@ include_admin_header('Edit Admin User');
     padding-top: 16px;
     border-top: 1px solid var(--color-gray-200);
 }
+
+/* Badge colors */
+.badge-purple { background-color: #8b5cf6; color: white; }
+.badge-teal { background-color: #14b8a6; color: white; }
+.badge-orange { background-color: #f97316; color: white; }
+
 @media (max-width: 768px) {
     .form-row {
+        grid-template-columns: 1fr;
+    }
+    .roles-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -303,17 +459,12 @@ include_admin_header('Edit Admin User');
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const roleSelect = document.getElementById('role');
-    
-    function updateRolePermissions() {
-        const selectedRole = roleSelect.value;
-        document.querySelectorAll('.role-permission').forEach(el => {
-            el.classList.toggle('active', el.dataset.role === selectedRole);
+    // Update card selection state when checkbox changes
+    document.querySelectorAll('.role-checkbox-card input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            this.closest('.role-checkbox-card').classList.toggle('selected', this.checked);
         });
-    }
-    
-    roleSelect.addEventListener('change', updateRolePermissions);
-    updateRolePermissions();
+    });
 });
 </script>
 

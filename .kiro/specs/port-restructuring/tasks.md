@@ -1,0 +1,150 @@
+# Implementation Plan
+
+- [x] 1. Create database migration for port restructuring
+  - [x] 1.1 Create migration file 035_restructure_ports_table.sql
+    - Add allowed_users INT column with default value 1
+    - Add allowed_storage_gb DECIMAL(10,2) column with default value 1.00
+    - Drop plan_id foreign key constraint
+    - Drop plan_id column
+    - Drop idx_plan_id index
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - [x] 1.2 Create migration runner script
+    - Create database/run_migration_035.php
+    - Include rollback capability
+    - _Requirements: 6.5_
+
+- [-] 2. Update Port model
+  - [x] 2.1 Modify Port model to support new fields
+    - Remove plan_id from create() method
+    - Remove plan_id from update() allowed fields
+    - Add allowed_users and allowed_storage_gb to create() and update()
+    - Remove findByPlanId() method
+    - Remove findAvailableByPlanId() method
+    - Remove countAvailableByPlanId() method
+    - Add findAvailable(int $limit) method
+    - Add countAvailable() method
+    - Update findAll() to support resource limit filters
+    - _Requirements: 1.1, 1.2, 2.1, 2.3, 3.2, 3.3_
+  - [ ]* 2.2 Write property test for port creation requires resource limits
+    - **Property 1: Port creation requires resource limits**
+    - **Validates: Requirements 1.1**
+  - [ ]* 2.3 Write property test for port creation succeeds without plan_id
+    - **Property 5: Port creation succeeds without plan_id**
+    - **Validates: Requirements 2.1**
+
+- [x] 3. Update PortService with validation
+  - [x] 3.1 Add resource limit validation to PortService
+    - Validate allowed_users >= 1 in createPort()
+    - Validate allowed_storage_gb >= 0.1 in createPort()
+    - Validate allowed_users >= 1 in updatePort()
+    - Validate allowed_storage_gb >= 0.1 in updatePort()
+    - Remove plan_id validation requirement
+    - Update getAvailablePorts() to remove planId parameter
+    - _Requirements: 1.4, 1.5, 2.1_
+  - [ ]* 3.2 Write property test for invalid allowed_users rejection
+    - **Property 3: Invalid allowed_users values are rejected**
+    - **Validates: Requirements 1.4**
+  - [ ]* 3.3 Write property test for invalid allowed_storage_gb rejection
+    - **Property 4: Invalid allowed_storage_gb values are rejected**
+    - **Validates: Requirements 1.5**
+  - [ ]* 3.4 Write property test for port resource limits are editable
+    - **Property 2: Port resource limits are editable**
+    - **Validates: Requirements 1.2**
+
+- [x] 4. Update PortAvailabilityService
+  - [x] 4.1 Modify availability checks to be plan-agnostic
+    - Update checkAvailability() to remove planId parameter
+    - Update hasAvailablePorts() to remove planId parameter
+    - Update getAvailablePortsCount() to remove planId parameter
+    - Update getAvailablePorts() to remove planId parameter
+    - Update validateCheckout() to remove planId parameter
+    - _Requirements: 4.1, 4.2_
+  - [ ]* 4.2 Write property test for availability check correctness
+    - **Property 9: Availability check returns true when available ports exist**
+    - **Validates: Requirements 4.1**
+
+- [x] 5. Update PortAllocationService
+  - [x] 5.1 Modify allocation to use any available port
+    - Update allocatePortToSubscription() to find any available port
+    - Remove plan_id from port query
+    - Update hasAvailablePorts() to remove planId parameter
+    - Update getAvailablePortsCount() to remove planId parameter
+    - _Requirements: 4.3, 4.4_
+  - [ ]* 5.2 Write property test for port allocation
+    - **Property 10: Port allocation assigns and updates status atomically**
+    - **Validates: Requirements 4.3, 4.4**
+
+- [ ] 6. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 7. Update admin port list page
+  - [x] 7.1 Modify admin/ports.php for new structure
+    - Remove Plan column from table
+    - Add Users column showing allowed_users
+    - Add Storage column showing allowed_storage_gb formatted as "X GB"
+    - Remove plan filter dropdown
+    - Add minimum users filter input
+    - Add minimum storage filter input
+    - Update SQL query to remove plan joins
+    - _Requirements: 2.4, 3.1, 3.2, 3.3_
+  - [ ]* 7.2 Write property test for port filtering by users
+    - **Property 6: Port filtering by minimum users returns correct results**
+    - **Validates: Requirements 3.2**
+  - [ ]* 7.3 Write property test for port filtering by storage
+    - **Property 7: Port filtering by minimum storage returns correct results**
+    - **Validates: Requirements 3.3**
+
+- [x] 8. Update admin port create page
+  - [x] 8.1 Modify admin/ports/new.php for new fields
+    - Remove plan_id dropdown field
+    - Add allowed_users number input (required, min=1)
+    - Add allowed_storage_gb number input (required, min=0.1, step=0.01)
+    - Update form validation
+    - Update form submission handling
+    - _Requirements: 1.1, 2.1, 2.2_
+
+- [-] 9. Update admin port edit page
+  - [x] 9.1 Modify admin/ports/edit.php for new fields
+    - Remove plan_id dropdown field
+    - Add allowed_users number input (required, min=1)
+    - Add allowed_storage_gb number input (required, min=0.1, step=0.01)
+    - Update form validation
+    - Update form submission handling
+    - _Requirements: 1.2, 1.3, 2.2_
+
+- [x] 10. Update CSV import functionality
+  - [x] 10.1 Modify admin/ports/import.php for new fields
+    - Remove plan_id from required/accepted columns
+    - Add allowed_users to required columns
+    - Add allowed_storage_gb to required columns
+    - Add validation for resource limits during import
+    - Update CSV parsing logic
+    - Update import preview display
+    - _Requirements: 3.4, 3.5_
+  - [ ]* 10.2 Write property test for CSV import validation
+    - **Property 8: CSV import validates resource limits**
+    - **Validates: Requirements 3.5**
+
+- [x] 11. Update checkout flow
+  - [x] 11.1 Modify checkout to check global port availability
+    - Update public/checkout.php to use plan-agnostic availability check
+    - Update public/select-plan.php to use plan-agnostic availability check
+    - Update availability error messages
+    - _Requirements: 4.1, 4.2_
+
+- [x] 12. Update customer-facing pages
+  - [x] 12.1 Modify app/subscription.php to show resource limits
+    - Display allowed_users value with label
+    - Display allowed_storage_gb value with label
+    - _Requirements: 5.1, 5.2_
+  - [x] 12.2 Modify app/my-port.php to show resource limits
+    - Add Resource Limits section
+    - Display allowed_users as "Maximum Users"
+    - Display allowed_storage_gb as "Storage Limit"
+    - _Requirements: 5.3_
+  - [ ]* 12.3 Write property test for resource limits display
+    - **Property 11: Resource limits display on customer pages**
+    - **Validates: Requirements 5.1, 5.2, 5.3**
+
+- [ ] 13. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

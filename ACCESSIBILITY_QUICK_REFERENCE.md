@@ -1,5 +1,5 @@
 # Accessibility Quick Reference Guide
-## For Developers Working on Karyalay Portal System
+## For Developers Working on SellerPortal System
 
 ---
 

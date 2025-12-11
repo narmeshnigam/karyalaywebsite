@@ -4,6 +4,11 @@
  * Provides utility functions for admin panel templates
  */
 
+// Include template helpers for URL functions
+require_once __DIR__ . '/template_helpers.php';
+
+use Karyalay\Services\RoleService;
+
 /**
  * Include admin header template
  * 
@@ -36,8 +41,8 @@ function include_admin_footer($additional_js = []) {
 }
 
 /**
- * Require admin authentication
- * Redirects to login if not authenticated or not admin
+ * Require admin authentication (legacy - allows any admin panel access)
+ * Redirects to login if not authenticated or doesn't have admin.access permission
  * 
  * @return void
  */
@@ -63,10 +68,156 @@ function require_admin() {
         exit;
     }
     
-    if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'ADMIN') {
+    // Check if user can access admin panel using RoleService
+    if (!RoleService::canAccessAdmin($_SESSION['user_id'])) {
         http_response_code(403);
-        die('Access denied. Admin privileges required.');
+        die('Access denied. Admin panel access required.');
     }
+}
+
+/**
+ * Require specific permission(s) for admin page access
+ * 
+ * @param string|array $permissions Required permission(s)
+ * @param bool $requireAll If true, requires all permissions; if false, requires any
+ * @return void
+ */
+function require_permission($permissions, $requireAll = false) {
+    // Ensure auth helpers are loaded
+    if (!function_exists('startSecureSession')) {
+        require_once __DIR__ . '/auth_helpers.php';
+    }
+    startSecureSession();
+    
+    if (!isset($_SESSION['user_id'])) {
+        if (!function_exists('get_base_url')) {
+            require_once __DIR__ . '/template_helpers.php';
+        }
+        $baseUrl = get_base_url();
+        header('Location: ' . $baseUrl . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+        exit;
+    }
+    
+    $userId = $_SESSION['user_id'];
+    $permissions = is_array($permissions) ? $permissions : [$permissions];
+    
+    $hasAccess = false;
+    
+    if ($requireAll) {
+        $hasAccess = RoleService::userHasAllPermissions($userId, $permissions);
+    } else {
+        $hasAccess = RoleService::userHasAnyPermission($userId, $permissions);
+    }
+    
+    if (!$hasAccess) {
+        http_response_code(403);
+        die('Access denied. You do not have permission to access this page.');
+    }
+}
+
+/**
+ * Check if current user has a specific permission
+ * 
+ * @param string $permission Permission to check
+ * @return bool True if user has permission
+ */
+function has_permission($permission) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    return RoleService::userHasPermission($_SESSION['user_id'], $permission);
+}
+
+/**
+ * Check if current user has any of the specified permissions
+ * 
+ * @param array $permissions Permissions to check
+ * @return bool True if user has any of the permissions
+ */
+function has_any_permission($permissions) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    return RoleService::userHasAnyPermission($_SESSION['user_id'], $permissions);
+}
+
+/**
+ * Check if current user has all of the specified permissions
+ * 
+ * @param array $permissions Permissions to check
+ * @return bool True if user has all permissions
+ */
+function has_all_permissions($permissions) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    return RoleService::userHasAllPermissions($_SESSION['user_id'], $permissions);
+}
+
+/**
+ * Check if current user has a specific role
+ * 
+ * @param string $role Role to check
+ * @return bool True if user has role
+ */
+function has_role($role) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    return RoleService::userHasRole($_SESSION['user_id'], $role);
+}
+
+/**
+ * Check if current user has any of the specified roles
+ * 
+ * @param array $roles Roles to check
+ * @return bool True if user has any of the roles
+ */
+function has_any_role($roles) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    return RoleService::userHasAnyRole($_SESSION['user_id'], $roles);
+}
+
+/**
+ * Check if current user is an admin (has ADMIN role)
+ * 
+ * @return bool True if user is admin
+ */
+function is_admin_user() {
+    return has_role('ADMIN');
+}
+
+/**
+ * Get current user's roles
+ * 
+ * @return array Array of role names
+ */
+function get_user_roles() {
+    if (!isset($_SESSION['user_id'])) {
+        return [];
+    }
+    
+    return RoleService::getUserRoles($_SESSION['user_id']);
+}
+
+/**
+ * Get current user's permissions
+ * 
+ * @return array Array of permission names
+ */
+function get_user_permissions() {
+    if (!isset($_SESSION['user_id'])) {
+        return [];
+    }
+    
+    return RoleService::getUserPermissions($_SESSION['user_id']);
 }
 
 /**
@@ -113,13 +264,20 @@ function format_number($number) {
 }
 
 /**
- * Format currency for display
+ * Format currency using centralized localisation
+ * This is a wrapper around the format_price function from template_helpers.php
  * 
  * @param float $amount Amount to format
- * @param string $currency Currency code (default: USD)
+ * @param string $currency Currency code (deprecated, uses localisation settings)
  * @return string Formatted currency
  */
 function format_currency($amount, $currency = 'USD') {
+    // Use centralized localisation if available
+    if (function_exists('format_price')) {
+        return format_price($amount);
+    }
+    
+    // Fallback to old behavior
     $symbols = [
         'USD' => '$',
         'EUR' => '€',
@@ -302,14 +460,32 @@ function format_file_size($bytes) {
  */
 function get_role_badge($role) {
     $role_config = [
-        'ADMIN' => ['label' => 'Admin', 'type' => 'danger'],
+        'ADMIN' => ['label' => 'Administrator', 'type' => 'danger'],
         'SUPPORT' => ['label' => 'Support', 'type' => 'info'],
+        'INFRASTRUCTURE' => ['label' => 'Infrastructure', 'type' => 'purple'],
         'SALES' => ['label' => 'Sales', 'type' => 'success'],
-        'CONTENT_EDITOR' => ['label' => 'Content Editor', 'type' => 'warning'],
+        'SALES_MANAGER' => ['label' => 'Sales Manager', 'type' => 'teal'],
+        'OPERATIONS' => ['label' => 'Operations', 'type' => 'orange'],
+        'CONTENT_MANAGER' => ['label' => 'Content Manager', 'type' => 'warning'],
+        'CONTENT_EDITOR' => ['label' => 'Content Editor', 'type' => 'warning'], // Legacy
         'CUSTOMER' => ['label' => 'Customer', 'type' => 'secondary'],
     ];
     
     $config = $role_config[$role] ?? ['label' => $role, 'type' => 'secondary'];
     
     return '<span class="badge badge-' . htmlspecialchars($config['type']) . '">' . htmlspecialchars($config['label']) . '</span>';
+}
+
+/**
+ * Get multiple role badges HTML
+ * 
+ * @param array $roles Array of role values
+ * @return string HTML for role badges
+ */
+function get_role_badges($roles) {
+    $badges = [];
+    foreach ($roles as $role) {
+        $badges[] = get_role_badge($role);
+    }
+    return implode(' ', $badges);
 }

@@ -1,6 +1,6 @@
 # Performance Optimization Guide
 
-This document describes the performance optimization techniques implemented in the Karyalay Portal System.
+This document describes the performance optimization techniques implemented in the SellerPortal System.
 
 ## Overview
 

@@ -13,6 +13,7 @@ use Karyalay\Services\ContentService;
 
 startSecureSession();
 require_admin();
+require_permission('solutions.manage');
 
 $db = \Karyalay\Database\Connection::getInstance();
 $contentService = new ContentService();
@@ -101,8 +102,7 @@ include_admin_header('Solutions');
         <p class="admin-page-description">Manage product solutions displayed on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/solutions/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/solutions/new.php" class="btn btn-primary">
             Create New Solution
         </a>
     </div>
@@ -123,7 +123,7 @@ include_admin_header('Solutions');
 <?php endif; ?>
 
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/solutions.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/solutions.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -148,7 +148,7 @@ include_admin_header('Solutions');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/solutions.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/solutions.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -159,7 +159,7 @@ include_admin_header('Solutions');
         render_empty_state(
             'No solutions found',
             'Get started by creating your first solution',
-            get_base_url() . '/admin/solutions/new.php',
+            get_app_base_url() . '/admin/solutions/new.php',
             'Create Solution'
         );
         ?>
@@ -205,12 +205,12 @@ include_admin_header('Solutions');
                             <td><?php echo get_relative_time($solution['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/solutions/edit.php?id=<?php echo urlencode($solution['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/solutions/edit.php?id=<?php echo urlencode($solution['id']); ?>" 
                                        class="btn btn-sm btn-secondary"
                                        title="Edit solution">
                                         Edit
                                     </a>
-                                    <a href="<?php echo get_base_url(); ?>/solution/<?php echo urlencode($solution['slug']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/solution/<?php echo urlencode($solution['slug']); ?>" 
                                        class="btn btn-sm btn-text"
                                        target="_blank"
                                        title="View on site">
@@ -227,7 +227,7 @@ include_admin_header('Solutions');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = get_base_url() . '/admin/solutions.php';
+                $base_url = get_app_base_url() . '/admin/solutions.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);

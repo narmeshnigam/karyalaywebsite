@@ -20,7 +20,7 @@ STAGING_PATH="${STAGING_PATH:-/var/www/staging}"
 BACKUP_DIR="${STAGING_PATH}/backups"
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}Karyalay Portal - Staging Deployment${NC}"
+echo -e "${GREEN}SellerPortal - Staging Deployment${NC}"
 echo -e "${GREEN}========================================${NC}"
 
 # Check if SSH key is configured

@@ -15,8 +15,9 @@ use Karyalay\Services\CsrfService;
 // Start session
 session_start();
 
-// Require admin authentication
+// Require admin authentication and ports.delete permission
 require_admin();
+require_permission('ports.delete');
 
 // Initialize services
 $portService = new PortService();
@@ -27,7 +28,7 @@ $portId = $_GET['id'] ?? '';
 
 if (empty($portId)) {
     $_SESSION['admin_error'] = 'Port ID is required.';
-    header('Location: /karyalayportal/admin/ports.php');
+    header('Location: ' . get_app_base_url() . '/admin/ports.php');
     exit;
 }
 
@@ -35,7 +36,7 @@ if (empty($portId)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$csrfService->validateToken($_POST['csrf_token'] ?? '')) {
         $_SESSION['admin_error'] = 'Invalid security token.';
-        header('Location: /karyalayportal/admin/ports.php');
+        header('Location: ' . get_app_base_url() . '/admin/ports.php');
         exit;
     }
 
@@ -48,10 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin_error'] = $result['error'] ?? 'Failed to delete port.';
     }
 
-    header('Location: /karyalayportal/admin/ports.php');
+    header('Location: ' . get_app_base_url() . '/admin/ports.php');
     exit;
 }
 
 // If GET request, redirect to edit page (delete should be POST only)
-header('Location: /karyalayportal/admin/ports/edit.php?id=' . urlencode($portId));
+header('Location: ' . get_app_base_url() . '/admin/ports/edit.php?id=' . urlencode($portId));
 exit;

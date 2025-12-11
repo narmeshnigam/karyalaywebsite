@@ -130,11 +130,10 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         $plan = $plans[0];
         $planId = $plan['id'];
         
-        // ===== STEP 5: Create Available Port for Plan =====
+        // ===== STEP 5: Create Available Port =====
         $portData = [
             'instance_url' => 'https://test-instance-' . bin2hex(random_bytes(4)) . '.karyalay.com',
             'port_number' => rand(8000, 9000),
-            'plan_id' => $planId,
             'status' => 'AVAILABLE',
             'server_region' => 'us-east-1'
         ];
@@ -144,11 +143,11 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         $this->testPorts[] = $port['id'];
         
         // ===== STEP 6: Check Port Availability =====
-        $hasAvailablePorts = $this->portAllocationService->hasAvailablePorts($planId);
+        $hasAvailablePorts = $this->portAllocationService->hasAvailablePorts();
         
         $this->assertTrue(
             $hasAvailablePorts,
-            'Port should be available for the plan'
+            'Port should be available'
         );
         
         // ===== STEP 7: Create Order (Payment Initiation) =====
@@ -207,7 +206,6 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         
         // ===== STEP 11: Verify Port Assignment =====
         $this->assertEquals('ASSIGNED', $allocatedPort['status']);
-        $this->assertEquals($userId, $allocatedPort['assigned_customer_id']);
         $this->assertEquals($subscriptionId, $allocatedPort['assigned_subscription_id']);
         $this->assertNotNull($allocatedPort['assigned_at']);
         
@@ -246,7 +244,6 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         // Port is assigned and linked
         $finalPort = $this->portModel->findById($allocatedPort['id']);
         $this->assertEquals('ASSIGNED', $finalPort['status']);
-        $this->assertEquals($userId, $finalPort['assigned_customer_id']);
         $this->assertEquals($subscriptionId, $finalPort['assigned_subscription_id']);
     }
 
@@ -275,12 +272,12 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         $this->assertNotEmpty($plans);
         $planId = $plans[0]['id'];
         
-        // ===== STEP 3: Ensure No Available Ports =====
-        // Don't create any ports for this plan
-        $hasAvailablePorts = $this->portAllocationService->hasAvailablePorts($planId);
+        // ===== STEP 3: Check Available Ports =====
+        // Note: Ports are now plan-agnostic
+        $hasAvailablePorts = $this->portAllocationService->hasAvailablePorts();
         
         // If ports exist from other tests, this might be true
-        // In a real scenario, we'd use a unique plan or clean up ports
+        // In a real scenario, we'd clean up ports or disable them
         
         // ===== STEP 4: Create Order =====
         $order = $this->orderService->createOrder($userId, $planId);
@@ -304,8 +301,8 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
         $this->testSubscriptions[] = $subscriptionId;
         
         // ===== STEP 7: Try to Allocate Port (Should Fail) =====
-        // First, disable all available ports for this plan to ensure failure
-        $availablePorts = $this->portModel->findAvailableByPlanId($planId, 100);
+        // First, disable all available ports to ensure failure
+        $availablePorts = $this->portModel->findAvailable(100);
         $disabledPorts = [];
         foreach ($availablePorts as $port) {
             $this->portModel->update($port['id'], ['status' => 'DISABLED']);
@@ -378,7 +375,6 @@ class UserRegistrationToPurchaseFlowTest extends TestCase
             $port = $this->portModel->create([
                 'instance_url' => 'https://concurrent-test-' . $i . '-' . bin2hex(random_bytes(4)) . '.karyalay.com',
                 'port_number' => 8000 + $i,
-                'plan_id' => $planId,
                 'status' => 'AVAILABLE'
             ]);
             $this->testPorts[] = $port['id'];

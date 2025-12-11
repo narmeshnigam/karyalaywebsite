@@ -1,6 +1,6 @@
 # Deployment Documentation Index
 
-This document provides a comprehensive index of all deployment-related documentation for the Karyalay Portal System.
+This document provides a comprehensive index of all deployment-related documentation for the SellerPortal System.
 
 ## Quick Navigation
 

@@ -99,8 +99,8 @@ class PlanDisplayCompletenessPropertyTest extends TestCase
                         // Verify field values match
                         $this->assertEquals($createdPlan['name'], $retrievedPlan['name'], 
                             'Plan name must match');
-                        $this->assertEquals($createdPlan['price'], $retrievedPlan['price'], 
-                            'Plan price must match');
+                        $this->assertEquals($createdPlan['mrp'], $retrievedPlan['mrp'], 
+                            'Plan MRP must match');
                         $this->assertEquals($createdPlan['billing_period_months'], $retrievedPlan['billing_period_months'], 
                             'Plan billing period must match');
                         $this->assertEquals($createdPlan['currency'], $retrievedPlan['currency'], 
@@ -169,7 +169,7 @@ class PlanDisplayCompletenessPropertyTest extends TestCase
             
             // Assert: All pricing information is present and correct
             $this->assertEquals($name, $retrieved['name']);
-            $this->assertEquals($planData['price'], $retrieved['price']);
+            $this->assertEquals($planData['mrp'], $retrieved['mrp']);
             $this->assertEquals($currency, $retrieved['currency']);
             $this->assertEquals($billingPeriod, $retrieved['billing_period_months']);
             $this->assertIsArray($retrieved['features']);

@@ -27,18 +27,35 @@ class AuthService
     /**
      * Register a new user
      * 
-     * @param array $data User registration data (email, password, name, phone, business_name)
+     * @param array $data User registration data (email, password, name, phone [required], business_name)
      * @return array Returns ['success' => bool, 'user' => array|null, 'error' => string|null]
      */
     public function register(array $data): array
     {
         // Validate required fields
-        if (empty($data['email']) || empty($data['password']) || empty($data['name'])) {
-            return [
-                'success' => false,
-                'user' => null,
-                'error' => 'Email, password, and name are required'
-            ];
+        $requiredFields = ['email', 'password', 'name'];
+        
+        // Phone is required for customer registrations
+        $role = $data['role'] ?? 'CUSTOMER';
+        if ($role === 'CUSTOMER') {
+            $requiredFields[] = 'phone';
+        }
+        
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                $missingFields = array_filter($requiredFields, function($f) use ($data) {
+                    return empty($data[$f]);
+                });
+                $fieldNames = array_map(function($f) {
+                    return $f === 'phone' ? 'phone number' : $f;
+                }, $missingFields);
+                
+                return [
+                    'success' => false,
+                    'user' => null,
+                    'error' => ucfirst(implode(', ', $fieldNames)) . ' ' . (count($fieldNames) > 1 ? 'are' : 'is') . ' required'
+                ];
+            }
         }
 
         // Validate email format
@@ -47,6 +64,16 @@ class AuthService
                 'success' => false,
                 'user' => null,
                 'error' => 'Invalid email format'
+            ];
+        }
+
+        // Validate phone number format (if provided)
+        // Accepts international format with ISD code: +[country code][number]
+        if (!empty($data['phone']) && !preg_match('/^\+[0-9]{1,4}[0-9]{6,15}$/', $data['phone'])) {
+            return [
+                'success' => false,
+                'user' => null,
+                'error' => 'Please enter a valid phone number with country code'
             ];
         }
 
@@ -75,7 +102,7 @@ class AuthService
             'name' => $data['name'],
             'phone' => $data['phone'] ?? null,
             'business_name' => $data['business_name'] ?? null,
-            'role' => 'CUSTOMER',
+            'role' => $role,
             'email_verified' => false
         ]);
 
@@ -85,6 +112,31 @@ class AuthService
                 'user' => null,
                 'error' => 'Failed to create user'
             ];
+        }
+
+        // Send welcome email to user
+        try {
+            $emailService = new EmailService();
+            $emailService->sendWelcomeEmail($data['email'], $data['name']);
+        } catch (\Exception $e) {
+            error_log('Failed to send welcome email: ' . $e->getMessage());
+            // Don't fail registration if email fails
+        }
+
+        // Send notification email to admin
+        try {
+            $emailService = new EmailService();
+            $emailService->sendNewUserNotification([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'role' => $user['role'],
+                'business_name' => $data['business_name'] ?? null,
+                'email_verified' => $user['email_verified']
+            ]);
+        } catch (\Exception $e) {
+            error_log('Failed to send admin notification email: ' . $e->getMessage());
+            // Don't fail registration if email fails
         }
 
         // Remove password_hash from response

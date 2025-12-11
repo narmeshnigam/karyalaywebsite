@@ -281,7 +281,7 @@ class Solution
 
     private function decodeJsonFields(array $data): array
     {
-        $jsonFields = ['features', 'benefits', 'screenshots', 'faqs'];
+        $jsonFields = ['features', 'benefits', 'screenshots', 'faqs', 'use_cases', 'stats'];
         
         foreach ($jsonFields as $field) {
             if (isset($data[$field]) && is_string($data[$field])) {
@@ -290,6 +290,84 @@ class Solution
         }
         
         return $data;
+    }
+
+    /**
+     * Get linked features for a solution
+     * 
+     * @param string $solutionId Solution ID
+     * @return array Returns array of linked features with full details
+     */
+    public function getLinkedFeatures(string $solutionId): array
+    {
+        try {
+            $sql = "SELECT f.*, sf.display_order as link_order, sf.is_highlighted
+                    FROM features f
+                    INNER JOIN solution_features sf ON f.id = sf.feature_id
+                    WHERE sf.solution_id = :solution_id AND f.status = 'PUBLISHED'
+                    ORDER BY sf.display_order ASC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':solution_id' => $solutionId]);
+            
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($results as &$result) {
+                // Decode JSON fields for features
+                $jsonFields = ['benefits', 'related_solutions', 'screenshots'];
+                foreach ($jsonFields as $field) {
+                    if (isset($result[$field]) && is_string($result[$field])) {
+                        $result[$field] = json_decode($result[$field], true);
+                    }
+                }
+            }
+            
+            return $results;
+        } catch (PDOException $e) {
+            error_log('Get linked features failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get related solutions (solutions that share features with this one)
+     * 
+     * @param string $solutionId Solution ID
+     * @param int $limit Maximum number of related solutions
+     * @return array Returns array of related solutions
+     */
+    public function getRelatedSolutions(string $solutionId, int $limit = 3): array
+    {
+        try {
+            $sql = "SELECT DISTINCT s.*, COUNT(sf2.feature_id) as shared_features
+                    FROM solutions s
+                    INNER JOIN solution_features sf2 ON s.id = sf2.solution_id
+                    WHERE sf2.feature_id IN (
+                        SELECT feature_id FROM solution_features WHERE solution_id = :solution_id
+                    )
+                    AND s.id != :solution_id2
+                    AND s.status = 'PUBLISHED'
+                    GROUP BY s.id
+                    ORDER BY shared_features DESC, s.display_order ASC
+                    LIMIT :limit";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':solution_id', $solutionId);
+            $stmt->bindValue(':solution_id2', $solutionId);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($results as &$result) {
+                $result = $this->decodeJsonFields($result);
+            }
+            
+            return $results;
+        } catch (PDOException $e) {
+            error_log('Get related solutions failed: ' . $e->getMessage());
+            return [];
+        }
     }
 
     private function generateUuid(): string

@@ -1,6 +1,6 @@
 # Database Migrations Guide
 
-This document provides comprehensive guidance on database migrations for the Karyalay Portal System.
+This document provides comprehensive guidance on database migrations for the SellerPortal System.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ This document provides comprehensive guidance on database migrations for the Kar
 
 ## Overview
 
-The Karyalay Portal System uses a custom migration system to manage database schema changes. Migrations are SQL files that are executed in order to create, modify, or delete database structures.
+The SellerPortal System uses a custom migration system to manage database schema changes. Migrations are SQL files that are executed in order to create, modify, or delete database structures.
 
 ### Key Features
 

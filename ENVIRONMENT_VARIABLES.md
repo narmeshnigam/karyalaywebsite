@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document provides a comprehensive reference for all environment variables used in the Karyalay Portal System.
+This document provides a comprehensive reference for all environment variables used in the SellerPortal System.
 
 ## Table of Contents
 
@@ -158,9 +158,9 @@ This document provides a comprehensive reference for all environment variables u
 ### MAIL_FROM_NAME
 - **Description**: Default "from" name
 - **Type**: String
-- **Default**: `Karyalay Portal`
+- **Default**: `SellerPortal`
 - **Required**: Yes
-- **Example**: `MAIL_FROM_NAME="Karyalay Portal"`
+- **Example**: `MAIL_FROM_NAME="SellerPortal"`
 
 ### ADMIN_EMAIL
 - **Description**: Admin email for system notifications
@@ -417,7 +417,7 @@ MAIL_PORT=2525
 MAIL_USERNAME=your_mailtrap_username
 MAIL_PASSWORD=your_mailtrap_password
 MAIL_FROM_ADDRESS=noreply@karyalay.local
-MAIL_FROM_NAME="Karyalay Portal Dev"
+MAIL_FROM_NAME="SellerPortal Dev"
 ADMIN_EMAIL=admin@karyalay.local
 
 # Payment Gateway (Test Mode)
@@ -462,7 +462,7 @@ MAIL_PORT=587
 MAIL_USERNAME=apikey
 MAIL_PASSWORD=SG.your_sendgrid_api_key
 MAIL_FROM_ADDRESS=noreply@staging.karyalay.com
-MAIL_FROM_NAME="Karyalay Portal Staging"
+MAIL_FROM_NAME="SellerPortal Staging"
 ADMIN_EMAIL=admin@karyalay.com
 
 # Payment Gateway (Test Mode)
@@ -517,7 +517,7 @@ MAIL_PORT=587
 MAIL_USERNAME=apikey
 MAIL_PASSWORD=SG.your_production_sendgrid_api_key
 MAIL_FROM_ADDRESS=noreply@karyalay.com
-MAIL_FROM_NAME="Karyalay Portal"
+MAIL_FROM_NAME="SellerPortal"
 ADMIN_EMAIL=admin@karyalay.com
 
 # Payment Gateway (Live Mode)

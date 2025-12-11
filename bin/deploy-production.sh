@@ -22,7 +22,7 @@ PRODUCTION_PATH="${PRODUCTION_PATH:-/var/www/production}"
 BACKUP_DIR="${PRODUCTION_PATH}/backups"
 
 echo -e "${RED}========================================${NC}"
-echo -e "${RED}Karyalay Portal - PRODUCTION Deployment${NC}"
+echo -e "${RED}SellerPortal - PRODUCTION Deployment${NC}"
 echo -e "${RED}========================================${NC}"
 
 # Confirmation prompt

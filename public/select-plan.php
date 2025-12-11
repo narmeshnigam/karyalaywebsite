@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Plan Selection Handler
  * 
  * Stores selected plan in session and redirects to checkout
@@ -52,6 +52,7 @@ if (empty($planSlug)) {
 
 // Validate plan exists
 use Karyalay\Models\Plan;
+use Karyalay\Services\PortAvailabilityService;
 
 try {
     $planModel = new Plan();
@@ -64,6 +65,15 @@ try {
     
     if ($plan['status'] !== 'ACTIVE') {
         $_SESSION['error'] = 'This plan is not currently available.';
+        redirect('/pricing.php');
+    }
+    
+    // Check port availability (plan-agnostic)
+    $portAvailabilityService = new PortAvailabilityService();
+    $availabilityCheck = $portAvailabilityService->checkAvailability();
+    
+    if (!$availabilityCheck['available']) {
+        $_SESSION['error'] = 'No available ports. Please contact support.';
         redirect('/pricing.php');
     }
     

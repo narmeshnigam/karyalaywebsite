@@ -16,12 +16,12 @@ if ($config['debug']) {
 }
 
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/admin_helpers.php';
 startSecureSession();
 
-if (!isAuthenticated() || !isAdmin()) {
-    header('Location: ' . get_base_url() . '/login.php');
-    exit;
-}
+// Require admin authentication and about.manage permission
+require_admin();
+require_permission('about.manage');
 
 require_once __DIR__ . '/../includes/template_helpers.php';
 
@@ -132,52 +132,67 @@ include __DIR__ . '/../templates/admin-header.php';
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/about-page.php" class="admin-form-container">
-        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+    <!-- Quick Preview Link -->
+    <div class="legal-preview-links">
+        <a href="<?php echo get_base_url(); ?>/about.php" class="legal-preview-link" target="_blank">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            Preview About Page
+        </a>
+    </div>
 
-        <!-- Our Story Section -->
-        <div class="admin-card mb-6">
-            <div class="admin-card-header">
-                <h2>Our Story</h2>
-            </div>
-            <div class="admin-card-body">
+    <div class="admin-card">
+        <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/about-page.php" class="admin-form" id="aboutForm">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" id="storyInput" name="our_story">
+            <input type="hidden" id="visionInput" name="our_vision">
+            <input type="hidden" id="missionInput" name="our_mission">
+            <input type="hidden" id="value1DescInput" name="value_1_desc">
+            <input type="hidden" id="value2DescInput" name="value_2_desc">
+            <input type="hidden" id="value3DescInput" name="value_3_desc">
+
+            <!-- Our Story Section -->
+            <div class="form-section">
+                <h3 class="form-section-title">Our Story</h3>
+                <p class="form-section-description">Tell your company's story. Use the rich text editor for formatting with headings, lists, and emphasis.</p>
+                
                 <div class="form-group">
-                    <label for="our_story" class="form-label">Story Content</label>
-                    <textarea id="our_story" name="our_story" class="form-textarea" rows="10"
-                              placeholder="Tell your company's story..."><?php echo htmlspecialchars($formData['our_story']); ?></textarea>
-                    <p class="form-help">Use multiple paragraphs to tell your company's story. Each paragraph will be displayed separately.</p>
+                    <label class="form-label">Story Content</label>
+                    <div id="editor-story-container">
+                        <div id="editor-story"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Vision & Mission Section -->
-        <div class="admin-card mb-6">
-            <div class="admin-card-header">
-                <h2>Vision & Mission</h2>
-            </div>
-            <div class="admin-card-body">
+            <!-- Vision & Mission Section -->
+            <div class="form-section">
+                <h3 class="form-section-title">Vision & Mission</h3>
+                <p class="form-section-description">Define your company's vision and mission statements. Use the rich text editor for formatting.</p>
+                
                 <div class="form-group">
-                    <label for="our_vision" class="form-label">Our Vision</label>
-                    <textarea id="our_vision" name="our_vision" class="form-textarea" rows="4"
-                              placeholder="Describe your company's vision..."><?php echo htmlspecialchars($formData['our_vision']); ?></textarea>
+                    <label class="form-label">Our Vision</label>
+                    <div id="editor-vision-container">
+                        <div id="editor-vision"></div>
+                    </div>
                 </div>
+                
                 <div class="form-group">
-                    <label for="our_mission" class="form-label">Our Mission</label>
-                    <textarea id="our_mission" name="our_mission" class="form-textarea" rows="4"
-                              placeholder="Describe your company's mission..."><?php echo htmlspecialchars($formData['our_mission']); ?></textarea>
+                    <label class="form-label">Our Mission</label>
+                    <div id="editor-mission-container">
+                        <div id="editor-mission"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Core Values Section -->
-        <div class="admin-card mb-6">
-            <div class="admin-card-header">
-                <h2>Core Values</h2>
-            </div>
-            <div class="admin-card-body">
+            <!-- Core Values Section -->
+            <div class="form-section">
+                <h3 class="form-section-title">Core Values</h3>
+                <p class="form-section-description">Define your company's core values with titles, descriptions, and optional images.</p>
+                
                 <!-- Value 1 -->
                 <div class="value-group">
-                    <h3 class="value-group-title">Core Value 1</h3>
+                    <h4 class="value-group-title">Core Value 1</h4>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="value_1_title" class="form-label">Title</label>
@@ -193,15 +208,16 @@ include __DIR__ . '/../templates/admin-header.php';
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="value_1_desc" class="form-label">Description</label>
-                        <textarea id="value_1_desc" name="value_1_desc" class="form-textarea" rows="3"
-                                  placeholder="Describe this core value..."><?php echo htmlspecialchars($formData['value_1_desc']); ?></textarea>
+                        <label class="form-label">Description</label>
+                        <div id="editor-value1-container">
+                            <div id="editor-value1"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Value 2 -->
                 <div class="value-group">
-                    <h3 class="value-group-title">Core Value 2</h3>
+                    <h4 class="value-group-title">Core Value 2</h4>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="value_2_title" class="form-label">Title</label>
@@ -217,15 +233,16 @@ include __DIR__ . '/../templates/admin-header.php';
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="value_2_desc" class="form-label">Description</label>
-                        <textarea id="value_2_desc" name="value_2_desc" class="form-textarea" rows="3"
-                                  placeholder="Describe this core value..."><?php echo htmlspecialchars($formData['value_2_desc']); ?></textarea>
+                        <label class="form-label">Description</label>
+                        <div id="editor-value2-container">
+                            <div id="editor-value2"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Value 3 -->
                 <div class="value-group">
-                    <h3 class="value-group-title">Core Value 3</h3>
+                    <h4 class="value-group-title">Core Value 3</h4>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="value_3_title" class="form-label">Title</label>
@@ -241,101 +258,221 @@ include __DIR__ . '/../templates/admin-header.php';
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="value_3_desc" class="form-label">Description</label>
-                        <textarea id="value_3_desc" name="value_3_desc" class="form-textarea" rows="3"
-                                  placeholder="Describe this core value..."><?php echo htmlspecialchars($formData['value_3_desc']); ?></textarea>
+                        <label class="form-label">Description</label>
+                        <div id="editor-value3-container">
+                            <div id="editor-value3"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <a href="<?php echo get_base_url(); ?>/about.php" class="btn btn-outline" target="_blank">Preview Page</a>
-        </div>
-    </form>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="<?php echo get_app_base_url(); ?>/admin/dashboard.php" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
 </div>
 
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
 <style>
-.admin-form-container {
-    max-width: 900px;
+/* Preview Links */
+.legal-preview-links {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
 }
 
+.legal-preview-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.legal-preview-link:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.legal-preview-link svg {
+    flex-shrink: 0;
+}
+
+/* Admin Card */
 .admin-card {
-    background: var(--color-white);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
 
-.admin-card-header {
-    padding: var(--spacing-4) var(--spacing-6);
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
+/* Form Sections */
+.form-section {
+    padding: 24px;
+    margin-bottom: 24px;
 }
 
-.admin-card-header h2 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-gray-900);
-    margin: 0;
+.form-section:last-of-type {
+    margin-bottom: 0;
 }
 
-.admin-card-body {
-    padding: var(--spacing-6);
+.form-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 20px;
+    line-height: 1.5;
 }
 
 .form-row {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-4);
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .form-group {
-    margin-bottom: var(--spacing-4);
+    margin-bottom: 20px;
 }
 
 .form-label {
     display: block;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-gray-700);
-    margin-bottom: var(--spacing-2);
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
 }
 
-.form-input,
-.form-textarea {
+.form-input {
     width: 100%;
-    padding: var(--spacing-3);
-    border: 1px solid var(--color-gray-300);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-base);
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.form-input:focus,
-.form-textarea:focus {
+.form-input:focus {
     outline: none;
-    border-color: var(--color-primary);
+    border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-textarea {
-    resize: vertical;
+/* Editor Containers */
+#editor-story-container,
+#editor-vision-container,
+#editor-mission-container,
+#editor-value1-container,
+#editor-value2-container,
+#editor-value3-container {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.form-help {
-    font-size: var(--font-size-xs);
-    color: var(--color-gray-500);
-    margin-top: var(--spacing-1);
+#editor-story {
+    min-height: 400px;
+    font-size: 15px;
+    line-height: 1.7;
 }
 
+#editor-vision,
+#editor-mission {
+    min-height: 200px;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+#editor-value1,
+#editor-value2,
+#editor-value3 {
+    min-height: 150px;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+/* Quill Editor Styling */
+.ql-toolbar {
+    border: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    background: #f9fafb;
+    padding: 12px !important;
+}
+
+.ql-container {
+    border: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.ql-editor {
+    padding: 20px;
+}
+
+.ql-editor p,
+.ql-editor h1,
+.ql-editor h2,
+.ql-editor h3 {
+    margin-bottom: 1em;
+}
+
+.ql-editor h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+.ql-editor h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #374151;
+}
+
+.ql-editor ul,
+.ql-editor ol {
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+}
+
+.ql-editor li {
+    margin-bottom: 0.5em;
+}
+
+/* Value Groups */
 .value-group {
-    padding: var(--spacing-5);
-    background: var(--color-gray-50);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-5);
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
 }
 
 .value-group:last-child {
@@ -343,45 +480,247 @@ include __DIR__ . '/../templates/admin-header.php';
 }
 
 .value-group-title {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-gray-800);
-    margin: 0 0 var(--spacing-4) 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 16px 0;
 }
 
+/* Form Actions */
 .form-actions {
     display: flex;
-    gap: var(--spacing-3);
-    padding-top: var(--spacing-4);
+    gap: 12px;
+    padding: 20px 24px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 0 0 8px 8px;
 }
 
+.btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+.btn-secondary {
+    background: white;
+    color: #6b7280;
+    border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+    background: #f9fafb;
+    color: #374151;
+}
+
+/* Alert Messages */
 .alert {
-    padding: var(--spacing-4);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-6);
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
 }
 
 .alert-success {
-    background-color: #d1fae5;
+    background: #d1fae5;
     border: 1px solid #6ee7b7;
     color: #065f46;
 }
 
 .alert-error {
-    background-color: #fee2e2;
+    background: #fee2e2;
     border: 1px solid #fca5a5;
     color: #991b1b;
 }
 
-.mb-6 {
-    margin-bottom: var(--spacing-6);
-}
-
+/* Responsive */
 @media (max-width: 768px) {
+    .legal-preview-links {
+        flex-direction: column;
+    }
+    
+    .legal-preview-link {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .form-section {
+        padding: 16px;
+    }
+    
     .form-row {
         grid-template-columns: 1fr;
     }
+    
+    .form-actions {
+        flex-direction: column;
+        padding: 16px;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    #editor-story {
+        min-height: 300px;
+    }
+    
+    #editor-vision,
+    #editor-mission {
+        min-height: 150px;
+    }
+    
+    #editor-value1,
+    #editor-value2,
+    #editor-value3 {
+        min-height: 120px;
+    }
 }
 </style>
+
+<!-- Quill JS -->
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toolbar configuration
+    var toolbarOptions = [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        ['blockquote', 'code-block'],
+        ['link'],
+        [{ 'align': [] }],
+        ['clean']
+    ];
+    
+    // Initialize Story editor
+    var quillStory = new Quill('#editor-story', {
+        theme: 'snow',
+        placeholder: 'Tell your company\'s story...',
+        modules: {
+            toolbar: toolbarOptions
+        }
+    });
+    
+    // Initialize Vision editor
+    var quillVision = new Quill('#editor-vision', {
+        theme: 'snow',
+        placeholder: 'Describe your company\'s vision...',
+        modules: {
+            toolbar: toolbarOptions
+        }
+    });
+    
+    // Initialize Mission editor
+    var quillMission = new Quill('#editor-mission', {
+        theme: 'snow',
+        placeholder: 'Describe your company\'s mission...',
+        modules: {
+            toolbar: toolbarOptions
+        }
+    });
+    
+    // Initialize Value editors
+    var quillValue1 = new Quill('#editor-value1', {
+        theme: 'snow',
+        placeholder: 'Describe this core value...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+    
+    var quillValue2 = new Quill('#editor-value2', {
+        theme: 'snow',
+        placeholder: 'Describe this core value...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+    
+    var quillValue3 = new Quill('#editor-value3', {
+        theme: 'snow',
+        placeholder: 'Describe this core value...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+    
+    // Load existing content
+    <?php if (!empty($formData['our_story'])): ?>
+    quillStory.root.innerHTML = <?php echo json_encode($formData['our_story']); ?>;
+    <?php endif; ?>
+    
+    <?php if (!empty($formData['our_vision'])): ?>
+    quillVision.root.innerHTML = <?php echo json_encode($formData['our_vision']); ?>;
+    <?php endif; ?>
+    
+    <?php if (!empty($formData['our_mission'])): ?>
+    quillMission.root.innerHTML = <?php echo json_encode($formData['our_mission']); ?>;
+    <?php endif; ?>
+    
+    <?php if (!empty($formData['value_1_desc'])): ?>
+    quillValue1.root.innerHTML = <?php echo json_encode($formData['value_1_desc']); ?>;
+    <?php endif; ?>
+    
+    <?php if (!empty($formData['value_2_desc'])): ?>
+    quillValue2.root.innerHTML = <?php echo json_encode($formData['value_2_desc']); ?>;
+    <?php endif; ?>
+    
+    <?php if (!empty($formData['value_3_desc'])): ?>
+    quillValue3.root.innerHTML = <?php echo json_encode($formData['value_3_desc']); ?>;
+    <?php endif; ?>
+    
+    // Sync editor content to hidden inputs on form submit
+    document.getElementById('aboutForm').addEventListener('submit', function() {
+        document.getElementById('storyInput').value = quillStory.root.innerHTML;
+        document.getElementById('visionInput').value = quillVision.root.innerHTML;
+        document.getElementById('missionInput').value = quillMission.root.innerHTML;
+        document.getElementById('value1DescInput').value = quillValue1.root.innerHTML;
+        document.getElementById('value2DescInput').value = quillValue2.root.innerHTML;
+        document.getElementById('value3DescInput').value = quillValue3.root.innerHTML;
+    });
+});
+</script>
 
 <?php include __DIR__ . '/../templates/admin-footer.php'; ?>

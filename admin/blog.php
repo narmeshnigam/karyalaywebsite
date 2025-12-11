@@ -13,8 +13,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and blog.manage permission
 require_admin();
+require_permission('blog.manage');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -109,8 +110,7 @@ include_admin_header('Blog Posts');
         <p class="admin-page-description">Manage blog posts displayed on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/blog/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/blog/new.php" class="btn btn-primary">
             Create New Post
         </a>
     </div>
@@ -118,7 +118,7 @@ include_admin_header('Blog Posts');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/blog.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/blog.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -143,7 +143,7 @@ include_admin_header('Blog Posts');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/blog.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/blog.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -155,7 +155,7 @@ include_admin_header('Blog Posts');
         render_empty_state(
             'No blog posts found',
             'Get started by creating your first blog post',
-            get_base_url() . '/admin/blog/new.php',
+            get_app_base_url() . '/admin/blog/new.php',
             'Create Post'
         );
         ?>
@@ -217,12 +217,12 @@ include_admin_header('Blog Posts');
                             <td><?php echo get_relative_time($post['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/blog/edit.php?id=<?php echo urlencode($post['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/blog/edit.php?id=<?php echo urlencode($post['id']); ?>" 
                                        class="btn btn-sm btn-secondary"
                                        title="Edit post">
                                         Edit
                                     </a>
-                                    <a href="<?php echo get_base_url(); ?>/blog/<?php echo urlencode($post['slug']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/blog/<?php echo urlencode($post['slug']); ?>" 
                                        class="btn btn-sm btn-text"
                                        target="_blank"
                                        title="View on site">
@@ -240,7 +240,7 @@ include_admin_header('Blog Posts');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = get_base_url() . '/admin/blog.php';
+                $base_url = get_app_base_url() . '/admin/blog.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);

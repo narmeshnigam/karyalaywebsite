@@ -36,7 +36,7 @@ class PortAllocationService
      * Allocate port to a subscription
      * 
      * This method implements atomic port assignment with database transaction.
-     * It queries for available ports matching plan criteria, assigns the first one,
+     * It queries for any available port (plan-agnostic), assigns the first one,
      * updates port status to ASSIGNED, records assignment timestamp, and links
      * port to subscription and customer.
      * 
@@ -68,8 +68,8 @@ class PortAllocationService
                 ];
             }
 
-            // Query for available ports matching plan criteria
-            $availablePorts = $this->portModel->findAvailableByPlanId($subscription['plan_id'], 1);
+            // Query for any available port (plan-agnostic)
+            $availablePorts = $this->portModel->findAvailable(1);
 
             if (empty($availablePorts)) {
                 // Mark subscription as PENDING_ALLOCATION
@@ -77,13 +77,13 @@ class PortAllocationService
                 
                 // TODO: Send notification to admin
                 // This would typically use an EmailService or NotificationService
-                error_log("ADMIN NOTIFICATION: No available ports for subscription {$subscriptionId} on plan {$subscription['plan_id']}");
+                error_log("ADMIN NOTIFICATION: No available ports for subscription {$subscriptionId}");
                 
                 $this->db->rollBack();
                 return [
                     'success' => false,
                     'error' => 'NO_AVAILABLE_PORTS',
-                    'message' => 'No available ports for this plan. Subscription marked as PENDING_ALLOCATION.'
+                    'message' => 'No available ports. Subscription marked as PENDING_ALLOCATION.'
                 ];
             }
 
@@ -94,7 +94,6 @@ class PortAllocationService
             $assignSuccess = $this->portModel->assignToSubscription(
                 $port['id'],
                 $subscriptionId,
-                $subscription['customer_id'],
                 $assignedAt
             );
 
@@ -261,7 +260,6 @@ class PortAllocationService
             $assignSuccess = $this->portModel->assignToSubscription(
                 $portId,
                 $newSubscriptionId,
-                $newSubscription['customer_id'],
                 $assignedAt
             );
 
@@ -351,7 +349,13 @@ class PortAllocationService
             }
 
             $oldSubscriptionId = $port['assigned_subscription_id'];
-            $oldCustomerId = $port['assigned_customer_id'];
+            
+            // Get customer ID from subscription for logging
+            $oldCustomerId = null;
+            if ($oldSubscriptionId) {
+                $oldSubscription = $this->subscriptionModel->findById($oldSubscriptionId);
+                $oldCustomerId = $oldSubscription['customer_id'] ?? null;
+            }
 
             // Release port
             $releaseSuccess = $this->portModel->release($portId);
@@ -406,15 +410,14 @@ class PortAllocationService
     }
 
     /**
-     * Check if ports are available for a plan
+     * Check if ports are available (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return bool Returns true if at least one port is available
      */
-    public function hasAvailablePorts(string $planId): bool
+    public function hasAvailablePorts(): bool
     {
         try {
-            $count = $this->portModel->countAvailableByPlanId($planId);
+            $count = $this->portModel->countAvailable();
             return $count > 0;
         } catch (\Exception $e) {
             error_log('PortAllocationService::hasAvailablePorts failed: ' . $e->getMessage());
@@ -423,15 +426,14 @@ class PortAllocationService
     }
 
     /**
-     * Get available ports count for a plan
+     * Get available ports count (plan-agnostic)
      * 
-     * @param string $planId Plan ID
      * @return int Returns count of available ports
      */
-    public function getAvailablePortsCount(string $planId): int
+    public function getAvailablePortsCount(): int
     {
         try {
-            return $this->portModel->countAvailableByPlanId($planId);
+            return $this->portModel->countAvailable();
         } catch (\Exception $e) {
             error_log('PortAllocationService::getAvailablePortsCount failed: ' . $e->getMessage());
             return 0;

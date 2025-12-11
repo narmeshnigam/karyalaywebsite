@@ -4,6 +4,7 @@ namespace Karyalay\Services;
 
 use Karyalay\Models\Ticket;
 use Karyalay\Models\TicketMessage;
+use Karyalay\Models\User;
 use Karyalay\Database\Connection;
 use PDO;
 use PDOException;
@@ -18,19 +19,21 @@ class TicketService
 {
     private Ticket $ticketModel;
     private TicketMessage $messageModel;
+    private User $userModel;
     private PDO $db;
 
     public function __construct()
     {
         $this->ticketModel = new Ticket();
         $this->messageModel = new TicketMessage();
+        $this->userModel = new User();
         $this->db = Connection::getInstance();
     }
 
     /**
      * Create a new ticket with status OPEN
      * 
-     * @param array $data Ticket data (customer_id, subscription_id, subject, category, priority)
+     * @param array $data Ticket data (customer_id, subscription_id, subject, category, priority, description)
      * @return array Returns array with 'success' boolean and 'ticket' or 'error'
      */
     public function createTicket(array $data): array
@@ -57,6 +60,9 @@ class TicketService
                 ];
             }
 
+            // Send email notifications
+            $this->sendTicketNotifications($ticket, $data['description'] ?? '');
+
             return [
                 'success' => true,
                 'ticket' => $ticket
@@ -67,6 +73,50 @@ class TicketService
                 'success' => false,
                 'error' => 'An error occurred while creating ticket'
             ];
+        }
+    }
+
+    /**
+     * Send ticket notification emails to customer and admin
+     * 
+     * @param array $ticket Ticket data
+     * @param string $description Ticket description
+     * @return void
+     */
+    private function sendTicketNotifications(array $ticket, string $description): void
+    {
+        try {
+            // Get customer details
+            $customer = $this->userModel->findById($ticket['customer_id']);
+            
+            if (!$customer) {
+                error_log('TicketService: Cannot send notification - customer not found');
+                return;
+            }
+
+            // Prepare ticket data for email
+            $ticketData = [
+                'ticket_id' => $ticket['id'],
+                'customer_name' => $customer['name'] ?? 'Valued Customer',
+                'customer_email' => $customer['email'],
+                'customer_phone' => $customer['phone'] ?? 'Not provided',
+                'subject' => $ticket['subject'],
+                'description' => $description,
+                'priority' => strtoupper($ticket['priority'] ?? 'MEDIUM'),
+                'category' => $ticket['category'] ?? 'General',
+            ];
+
+            // Send email notifications
+            $emailService = EmailService::getInstance();
+            $emailSent = $emailService->sendTicketNotification($ticketData);
+
+            if ($emailSent) {
+                error_log("TicketService: Notification emails sent for ticket #{$ticket['id']}");
+            } else {
+                error_log("TicketService: Failed to send notification emails for ticket #{$ticket['id']}");
+            }
+        } catch (\Exception $e) {
+            error_log('TicketService: Error sending ticket notifications: ' . $e->getMessage());
         }
     }
 
@@ -574,6 +624,84 @@ class TicketService
         } catch (\Exception $e) {
             error_log('TicketService::countTicketMessages failed: ' . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Add admin reply and send notification to customer
+     * 
+     * @param string $ticketId Ticket ID
+     * @param string $adminId Admin user ID
+     * @param string $content Reply content
+     * @param bool $isInternal Whether this is an internal note (default: false)
+     * @return array Returns array with 'success' boolean and 'message' or 'error'
+     */
+    public function addAdminReply(string $ticketId, string $adminId, string $content, bool $isInternal = false): array
+    {
+        // Add the reply
+        $result = $this->addReply($ticketId, $adminId, 'ADMIN', $content, $isInternal);
+
+        if (!$result['success']) {
+            return $result;
+        }
+
+        // Send notification email to customer (only for non-internal replies)
+        if (!$isInternal) {
+            $this->sendReplyNotification($ticketId);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Send reply notification email to customer
+     * 
+     * @param string $ticketId Ticket ID
+     * @return void
+     */
+    private function sendReplyNotification(string $ticketId): void
+    {
+        try {
+            // Get ticket details
+            $ticket = $this->ticketModel->findById($ticketId);
+            
+            if (!$ticket) {
+                error_log('TicketService: Cannot send reply notification - ticket not found');
+                return;
+            }
+
+            // Get customer details
+            $customer = $this->userModel->findById($ticket['customer_id']);
+            
+            if (!$customer) {
+                error_log('TicketService: Cannot send reply notification - customer not found');
+                return;
+            }
+
+            // Build ticket URL
+            $baseUrl = $_ENV['APP_URL'] ?? 'http://localhost';
+            $ticketUrl = rtrim($baseUrl, '/') . '/app/support/tickets/view.php?id=' . urlencode($ticket['id']);
+
+            // Prepare reply data for email
+            $replyData = [
+                'ticket_id' => $ticket['id'],
+                'customer_name' => $customer['name'] ?? 'Valued Customer',
+                'customer_email' => $customer['email'],
+                'ticket_subject' => $ticket['subject'],
+                'ticket_url' => $ticketUrl,
+            ];
+
+            // Send email notification
+            $emailService = EmailService::getInstance();
+            $emailSent = $emailService->sendTicketReplyNotification($replyData);
+
+            if ($emailSent) {
+                error_log("TicketService: Reply notification email sent for ticket #{$ticket['id']}");
+            } else {
+                error_log("TicketService: Failed to send reply notification email for ticket #{$ticket['id']}");
+            }
+        } catch (\Exception $e) {
+            error_log('TicketService: Error sending reply notification: ' . $e->getMessage());
         }
     }
 }

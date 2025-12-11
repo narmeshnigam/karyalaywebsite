@@ -44,6 +44,20 @@
   margin-bottom: var(--spacing-4);
 }
 
+.footer-logo .brand-logo-img,
+.footer-logo-img {
+  max-height: 28px;
+  max-width: 160px;
+  width: auto;
+  object-fit: contain;
+}
+
+.footer-logo .brand-logo-text {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+}
+
 .footer-description {
   color: var(--color-gray-400);
   line-height: var(--line-height-relaxed);

@@ -1,4 +1,4 @@
-# Multi-stage build for Karyalay Portal System
+# Multi-stage build for SellerPortal System
 FROM php:8.0-apache as base
 
 # Install system dependencies

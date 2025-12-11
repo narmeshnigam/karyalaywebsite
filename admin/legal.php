@@ -14,8 +14,9 @@ use Karyalay\Services\CsrfService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and legal.manage permission
 require_admin();
+require_permission('legal.manage');
 
 // Initialize models
 $settingModel = new Setting();
@@ -78,21 +79,22 @@ include_admin_header('Legal Pages');
     </div>
 </div>
 
+<?php $base_url = get_app_base_url(); ?>
 <!-- Quick Preview Links -->
 <div class="legal-preview-links">
-    <a href="/karyalayportal/terms.php" class="legal-preview-link" target="_blank">
+    <a href="<?php echo $base_url; ?>/terms.php" class="legal-preview-link" target="_blank">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
         </svg>
         View Terms
     </a>
-    <a href="/karyalayportal/privacy.php" class="legal-preview-link" target="_blank">
+    <a href="<?php echo $base_url; ?>/privacy.php" class="legal-preview-link" target="_blank">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
         </svg>
         View Privacy
     </a>
-    <a href="/karyalayportal/refund.php" class="legal-preview-link" target="_blank">
+    <a href="<?php echo $base_url; ?>/refund.php" class="legal-preview-link" target="_blank">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
         </svg>
@@ -115,7 +117,7 @@ include_admin_header('Legal Pages');
 
 <!-- Legal Pages Form -->
 <div class="admin-card">
-    <form method="POST" action="/karyalayportal/admin/legal.php" class="admin-form" id="legalForm">
+    <form method="POST" action="<?php echo $base_url; ?>/admin/legal.php" class="admin-form" id="legalForm">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         <input type="hidden" id="termsInput" name="legal_terms_of_service">
         <input type="hidden" id="privacyInput" name="legal_privacy_policy">
@@ -164,7 +166,7 @@ include_admin_header('Legal Pages');
             <button type="submit" class="btn btn-primary">
                 Save Legal Pages
             </button>
-            <a href="/karyalayportal/admin/dashboard.php" class="btn btn-secondary">
+            <a href="<?php echo get_app_base_url(); ?>/admin/dashboard.php" class="btn btn-secondary">
                 Cancel
             </a>
         </div>

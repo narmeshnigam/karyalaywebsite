@@ -12,6 +12,7 @@ use Karyalay\Services\ContentService;
 
 startSecureSession();
 require_admin();
+require_permission('blog.manage');
 
 $contentService = new ContentService();
 
@@ -19,7 +20,7 @@ $post_id = $_GET['id'] ?? '';
 
 if (empty($post_id)) {
     $_SESSION['admin_error'] = 'Blog post ID is required.';
-    header('Location: ' . get_base_url() . '/admin/blog.php');
+    header('Location: ' . get_app_base_url() . '/admin/blog.php');
     exit;
 }
 
@@ -27,7 +28,7 @@ $post = $contentService->read('blog_post', $post_id);
 
 if (!$post) {
     $_SESSION['admin_error'] = 'Blog post not found.';
-    header('Location: ' . get_base_url() . '/admin/blog.php');
+    header('Location: ' . get_app_base_url() . '/admin/blog.php');
     exit;
 }
 
@@ -99,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Blog post updated successfully!';
-                header('Location: ' . get_base_url() . '/admin/blog.php');
+                header('Location: ' . get_app_base_url() . '/admin/blog.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update blog post. Please check if the slug is unique.';
@@ -118,7 +119,7 @@ include_admin_header('Edit Blog Post');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/blog.php">Blog Posts</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/blog.php">Blog Posts</a>
             <span class="breadcrumb-separator">/</span>
             <span>Edit Post</span>
         </nav>
@@ -126,7 +127,7 @@ include_admin_header('Edit Blog Post');
         <p class="admin-page-description">Update blog post content and settings</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/blog.php" class="btn btn-secondary">← Back to Blog Posts</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/blog.php" class="btn btn-secondary">← Back to Blog Posts</a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Post</button>
     </div>
 </div>
@@ -138,7 +139,7 @@ include_admin_header('Edit Blog Post');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/blog/edit.php?id=<?php echo urlencode($post_id); ?>" class="blog-form" id="blogForm">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/blog/edit.php?id=<?php echo urlencode($post_id); ?>" class="blog-form" id="blogForm">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="content" id="contentInput">
     
@@ -156,7 +157,7 @@ include_admin_header('Edit Blog Post');
                     <div class="form-group">
                         <label for="slug" class="form-label required">Slug</label>
                         <div class="slug-preview">
-                            <span class="slug-prefix"><?php echo get_base_url(); ?>/blog/</span>
+                            <span class="slug-prefix"><?php echo get_app_base_url(); ?>/blog/</span>
                             <input type="text" id="slug" name="slug" class="form-input" 
                                 value="<?php echo htmlspecialchars($form_data['slug']); ?>"
                                 required pattern="[a-z0-9\-]+" maxlength="255" placeholder="post-url-slug">
@@ -227,7 +228,7 @@ include_admin_header('Edit Blog Post');
                     
                     <div class="form-actions-sidebar">
                         <button type="submit" class="btn btn-primary btn-block">Update Post</button>
-                        <a href="<?php echo get_base_url(); ?>/admin/blog.php" class="btn btn-secondary btn-block">Cancel</a>
+                        <a href="<?php echo get_app_base_url(); ?>/admin/blog.php" class="btn btn-secondary btn-block">Cancel</a>
                     </div>
                 </div>
             </div>
@@ -272,7 +273,7 @@ include_admin_header('Edit Blog Post');
     </div>
 </form>
 
-<form id="deleteForm" method="POST" action="<?php echo get_base_url(); ?>/admin/blog/delete.php" style="display: none;">
+<form id="deleteForm" method="POST" action="<?php echo get_app_base_url(); ?>/admin/blog/delete.php" style="display: none;">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="id" value="<?php echo htmlspecialchars($post_id); ?>">
 </form>

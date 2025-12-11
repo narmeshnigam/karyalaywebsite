@@ -9,6 +9,26 @@ DirectoryIndex index.php index.html
 # Disable directory browsing
 Options -Indexes
 
+# Enable URL Rewriting
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Handle solution detail pages: /solution/slug -> solution.php?slug=slug
+    RewriteRule ^solution/([^/]+)/?$ solution.php?slug=$1 [L,QSA]
+    
+    # Handle feature detail pages: /feature/slug -> feature.php?slug=slug
+    RewriteRule ^feature/([^/]+)/?$ feature.php?slug=$1 [L,QSA]
+    
+    # Handle case study detail pages: /case-study/slug -> case-study.php?slug=slug
+    RewriteRule ^case-study/([^/]+)/?$ case-study.php?slug=$1 [L,QSA]
+    
+    # Handle blog post detail pages: /blog/slug -> blog-post.php?slug=slug
+    RewriteRule ^blog/([^/]+)/?$ blog-post.php?slug=$1 [L,QSA]
+    
+    # Handle module detail pages: /module/slug -> module.php?slug=slug
+    RewriteRule ^module/([^/]+)/?$ module.php?slug=$1 [L,QSA]
+</IfModule>
+
 # Security headers
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"

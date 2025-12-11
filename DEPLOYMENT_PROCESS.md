@@ -1,6 +1,6 @@
 # Deployment Process Documentation
 
-This document provides a comprehensive overview of the deployment process for the Karyalay Portal System, including step-by-step procedures, checklists, and best practices.
+This document provides a comprehensive overview of the deployment process for the SellerPortal System, including step-by-step procedures, checklists, and best practices.
 
 ## Table of Contents
 
@@ -790,7 +790,7 @@ ssh deploy@karyalay.com 'cd /var/www/production && php bin/cache-clear.php'
 
 ## Conclusion
 
-This deployment process documentation provides a comprehensive guide for deploying the Karyalay Portal System. Always follow the checklists, verify each step, and maintain clear communication with the team during deployments.
+This deployment process documentation provides a comprehensive guide for deploying the SellerPortal System. Always follow the checklists, verify each step, and maintain clear communication with the team during deployments.
 
 For questions or issues not covered in this documentation, contact the DevOps team at devops@karyalay.com.
 

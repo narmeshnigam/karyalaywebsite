@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Login Page
  */
 
@@ -34,9 +34,11 @@ if (is_logged_in()) {
     $baseUrl = get_base_url();
     // Redirect admins to admin dashboard, others to customer dashboard
     if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'ADMIN') {
-        header('Location: ' . $baseUrl . '/admin/dashboard.php');
+        $appBaseUrl = get_app_base_url();
+        header('Location: ' . $appBaseUrl . '/admin/dashboard.php');
     } else {
-        header('Location: ' . $baseUrl . '/app/dashboard.php');
+        $appBaseUrl = get_app_base_url();
+        header('Location: ' . $appBaseUrl . '/app/dashboard.php');
     }
     exit;
 }
@@ -85,10 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Redirect to appropriate dashboard based on role
                 $baseUrl = get_base_url();
+                $appBaseUrl = get_app_base_url();
                 if ($user['role'] === 'ADMIN') {
-                    header('Location: ' . $baseUrl . '/admin/dashboard.php');
+                    header('Location: ' . $appBaseUrl . '/admin/dashboard.php');
                 } else {
-                    header('Location: ' . $baseUrl . '/app/dashboard.php');
+                    header('Location: ' . $appBaseUrl . '/app/dashboard.php');
                 }
                 exit;
             } else {
@@ -103,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Set page variables
 $page_title = 'Login';
-$page_description = 'Login to your Karyalay account';
+$page_description = 'Login to your ' . get_brand_name() . ' account';
 
 // Include header
 include_header($page_title, $page_description);
@@ -115,7 +118,7 @@ include_header($page_title, $page_description);
         <div class="auth-card">
             <div class="auth-header">
                 <div class="auth-logo">
-                    <h1>Karyalay</h1>
+                    <?php echo render_brand_logo('light_bg', 'auth-logo-img', 50); ?>
                 </div>
                 <h2 class="auth-title">Welcome Back</h2>
                 <p class="auth-subtitle">Login to your account to continue</p>
@@ -130,7 +133,7 @@ include_header($page_title, $page_description);
                 </div>
             <?php endif; ?>
             
-            <form method="POST" action="/karyalayportal/login.php" class="auth-form" novalidate>
+            <form method="POST" action="<?php echo get_base_url(); ?>/login.php" class="auth-form" novalidate>
                 <!-- Email Field -->
                 <div class="auth-form-group">
                     <label for="email" class="auth-label">Email Address</label>
@@ -194,7 +197,7 @@ include_header($page_title, $page_description);
                         <input type="checkbox" name="remember" id="remember" class="auth-checkbox">
                         <span>Remember me</span>
                     </label>
-                    <a href="/karyalayportal/forgot-password.php" class="auth-link">Forgot password?</a>
+                    <a href="<?php echo get_base_url(); ?>/forgot-password.php" class="auth-link">Forgot password?</a>
                 </div>
                 
                 <!-- Submit Button -->
@@ -207,7 +210,7 @@ include_header($page_title, $page_description);
                 
                 <!-- Sign Up Link -->
                 <div class="auth-footer">
-                    <p>Don't have an account? <a href="/karyalayportal/register.php" class="auth-link-primary">Sign up</a></p>
+                    <p>Don't have an account? <a href="<?php echo get_base_url(); ?>/register.php" class="auth-link-primary">Sign up</a></p>
                 </div>
             </form>
         </div>
@@ -272,14 +275,28 @@ include_header($page_title, $page_description);
     margin-bottom: var(--spacing-8);
 }
 
-.auth-logo h1 {
+.auth-logo {
+    margin-bottom: var(--spacing-4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.auth-logo .brand-logo-img {
+    max-width: 200px;
+    max-height: 60px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.auth-logo .brand-logo-text {
     font-size: var(--font-size-3xl);
     font-weight: var(--font-weight-bold);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: var(--spacing-4);
 }
 
 .auth-title {

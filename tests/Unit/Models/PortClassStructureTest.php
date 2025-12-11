@@ -23,17 +23,16 @@ class PortClassStructureTest extends TestCase
         $requiredMethods = [
             'create',
             'findById',
-            'findByPlanId',
             'findBySubscriptionId',
-            'findAvailableByPlanId',
+            'findAvailable',
+            'countAvailable',
             'update',
             'delete',
             'findAll',
             'updateStatus',
             'assignToSubscription',
             'release',
-            'portExists',
-            'countAvailableByPlanId'
+            'portExists'
         ];
 
         foreach ($requiredMethods as $method) {
@@ -127,20 +126,33 @@ class PortClassStructureTest extends TestCase
         $this->assertEquals('bool', $method->getReturnType()->getName(), 'assignToSubscription method should return bool');
     }
 
-    public function testPortCountAvailableByPlanIdMethodSignature(): void
+    public function testPortCountAvailableMethodSignature(): void
     {
         $reflection = new ReflectionClass(Port::class);
-        $method = $reflection->getMethod('countAvailableByPlanId');
+        $method = $reflection->getMethod('countAvailable');
         
-        $this->assertTrue($method->isPublic(), 'countAvailableByPlanId method should be public');
-        $this->assertEquals(1, $method->getNumberOfParameters(), 'countAvailableByPlanId method should accept 1 parameter');
+        $this->assertTrue($method->isPublic(), 'countAvailable method should be public');
+        $this->assertEquals(0, $method->getNumberOfParameters(), 'countAvailable method should accept 0 parameters');
+        
+        $this->assertTrue($method->hasReturnType(), 'countAvailable method should have return type');
+        $this->assertEquals('int', $method->getReturnType()->getName(), 'countAvailable method should return int');
+    }
+
+    public function testPortFindAvailableMethodSignature(): void
+    {
+        $reflection = new ReflectionClass(Port::class);
+        $method = $reflection->getMethod('findAvailable');
+        
+        $this->assertTrue($method->isPublic(), 'findAvailable method should be public');
+        $this->assertEquals(1, $method->getNumberOfParameters(), 'findAvailable method should accept 1 parameter');
         
         $params = $method->getParameters();
-        $this->assertEquals('planId', $params[0]->getName(), 'First parameter should be named planId');
-        $this->assertTrue($params[0]->hasType(), 'planId parameter should have type hint');
-        $this->assertEquals('string', $params[0]->getType()->getName(), 'planId parameter should be string');
+        $this->assertEquals('limit', $params[0]->getName(), 'First parameter should be named limit');
+        $this->assertTrue($params[0]->hasType(), 'limit parameter should have type hint');
+        $this->assertEquals('int', $params[0]->getType()->getName(), 'limit parameter should be int');
+        $this->assertTrue($params[0]->isDefaultValueAvailable(), 'limit parameter should have default value');
         
-        $this->assertTrue($method->hasReturnType(), 'countAvailableByPlanId method should have return type');
-        $this->assertEquals('int', $method->getReturnType()->getName(), 'countAvailableByPlanId method should return int');
+        $this->assertTrue($method->hasReturnType(), 'findAvailable method should have return type');
+        $this->assertEquals('array', $method->getReturnType()->getName(), 'findAvailable method should return array');
     }
 }

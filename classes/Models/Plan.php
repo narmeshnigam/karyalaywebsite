@@ -23,7 +23,7 @@ class Plan
     /**
      * Create a new plan
      * 
-     * @param array $data Plan data (name, slug, description, price, currency, billing_period_months, features, status)
+     * @param array $data Plan data (name, slug, description, currency, billing_period_months, status, number_of_users, allowed_storage_gb, mrp, discounted_price, features_html, discount_amount, net_price, tax_percent, tax_name, tax_description, tax_amount)
      * @return array|false Returns plan data with id on success, false on failure
      */
     public function create(array $data)
@@ -32,9 +32,13 @@ class Plan
             $id = $this->generateUuid();
 
             $sql = "INSERT INTO plans (
-                id, name, slug, description, price, currency, billing_period_months, features, status
+                id, name, slug, description, currency, billing_period_months, status,
+                number_of_users, allowed_storage_gb, mrp, discounted_price, features_html,
+                discount_amount, net_price, tax_percent, tax_name, tax_description, tax_amount
             ) VALUES (
-                :id, :name, :slug, :description, :price, :currency, :billing_period_months, :features, :status
+                :id, :name, :slug, :description, :currency, :billing_period_months, :status,
+                :number_of_users, :allowed_storage_gb, :mrp, :discounted_price, :features_html,
+                :discount_amount, :net_price, :tax_percent, :tax_name, :tax_description, :tax_amount
             )";
 
             $stmt = $this->db->prepare($sql);
@@ -43,11 +47,20 @@ class Plan
                 ':name' => $data['name'],
                 ':slug' => $data['slug'],
                 ':description' => $data['description'] ?? null,
-                ':price' => $data['price'],
                 ':currency' => $data['currency'] ?? 'USD',
                 ':billing_period_months' => $data['billing_period_months'],
-                ':features' => isset($data['features']) ? json_encode($data['features']) : null,
-                ':status' => $data['status'] ?? 'ACTIVE'
+                ':status' => $data['status'] ?? 'ACTIVE',
+                ':number_of_users' => $data['number_of_users'] ?? null,
+                ':allowed_storage_gb' => $data['allowed_storage_gb'] ?? null,
+                ':mrp' => $data['mrp'],
+                ':discounted_price' => $data['discounted_price'] ?? null,
+                ':features_html' => $data['features_html'] ?? null,
+                ':discount_amount' => $data['discount_amount'] ?? null,
+                ':net_price' => $data['net_price'] ?? null,
+                ':tax_percent' => $data['tax_percent'] ?? null,
+                ':tax_name' => $data['tax_name'] ?? null,
+                ':tax_description' => $data['tax_description'] ?? null,
+                ':tax_amount' => $data['tax_amount'] ?? null
             ]);
 
             return $this->findById($id);
@@ -71,11 +84,6 @@ class Plan
             $stmt->execute([':id' => $id]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($result && isset($result['features'])) {
-                $result['features'] = json_decode($result['features'], true);
-            }
-            
             return $result ?: false;
         } catch (PDOException $e) {
             error_log('Plan find by ID failed: ' . $e->getMessage());
@@ -97,11 +105,6 @@ class Plan
             $stmt->execute([':slug' => $slug]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($result && isset($result['features'])) {
-                $result['features'] = json_decode($result['features'], true);
-            }
-            
             return $result ?: false;
         } catch (PDOException $e) {
             error_log('Plan find by slug failed: ' . $e->getMessage());
@@ -119,19 +122,14 @@ class Plan
     public function update(string $id, array $data): bool
     {
         try {
-            $allowedFields = ['name', 'slug', 'description', 'price', 'currency', 'billing_period_months', 'features', 'status'];
+            $allowedFields = ['name', 'slug', 'description', 'currency', 'billing_period_months', 'status', 'number_of_users', 'allowed_storage_gb', 'mrp', 'discounted_price', 'features_html', 'discount_amount', 'net_price', 'tax_percent', 'tax_name', 'tax_description', 'tax_amount'];
             $updateFields = [];
             $params = [':id' => $id];
 
             foreach ($data as $key => $value) {
                 if (in_array($key, $allowedFields)) {
-                    if ($key === 'features') {
-                        $updateFields[] = "features = :features";
-                        $params[':features'] = is_array($value) ? json_encode($value) : $value;
-                    } else {
-                        $updateFields[] = "$key = :$key";
-                        $params[":$key"] = $value;
-                    }
+                    $updateFields[] = "$key = :$key";
+                    $params[":$key"] = $value;
                 }
             }
 
@@ -171,7 +169,7 @@ class Plan
     /**
      * Get all plans with optional filters
      * 
-     * @param array $filters Optional filters (status)
+     * @param array $filters Optional filters (status, billing_period_months, duration)
      * @param int $limit Optional limit
      * @param int $offset Optional offset
      * @return array Returns array of plans
@@ -187,7 +185,29 @@ class Plan
                 $params[':status'] = $filters['status'];
             }
 
-            $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+            // Filter by billing period (duration)
+            if (isset($filters['billing_period_months'])) {
+                $sql .= " AND billing_period_months = :billing_period_months";
+                $params[':billing_period_months'] = $filters['billing_period_months'];
+            }
+
+            // Filter by duration category
+            if (isset($filters['duration'])) {
+                switch ($filters['duration']) {
+                    case 'monthly':
+                        $sql .= " AND billing_period_months = 1";
+                        break;
+                    case 'quarterly':
+                        $sql .= " AND billing_period_months = 3";
+                        break;
+                    case 'annual':
+                        $sql .= " AND billing_period_months = 12";
+                        break;
+                    // 'all' or default - no filter
+                }
+            }
+
+            $sql .= " ORDER BY billing_period_months ASC, mrp ASC LIMIT :limit OFFSET :offset";
 
             $stmt = $this->db->prepare($sql);
             
@@ -200,13 +220,6 @@ class Plan
             $stmt->execute();
             
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Decode JSON features for each plan
-            foreach ($results as &$result) {
-                if (isset($result['features'])) {
-                    $result['features'] = json_decode($result['features'], true);
-                }
-            }
             
             return $results;
         } catch (PDOException $e) {
@@ -241,6 +254,49 @@ class Plan
             error_log('Slug exists check failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Get the selling price for a plan (discounted_price if set, otherwise mrp)
+     * 
+     * @param array $plan Plan data
+     * @return float Selling price
+     */
+    public static function getSellingPrice(array $plan): float
+    {
+        if (!empty($plan['discounted_price']) && $plan['discounted_price'] > 0) {
+            return (float)$plan['discounted_price'];
+        }
+        return (float)$plan['mrp'];
+    }
+
+    /**
+     * Calculate tax breakdown from selling price
+     * 
+     * @param float $sellingPrice The final selling price (tax inclusive)
+     * @param float $taxPercent Tax percentage
+     * @return array ['net_price' => float, 'tax_amount' => float]
+     */
+    public static function calculateTaxBreakdown(float $sellingPrice, float $taxPercent): array
+    {
+        if ($taxPercent <= 0) {
+            return [
+                'net_price' => $sellingPrice,
+                'tax_amount' => 0
+            ];
+        }
+        
+        // Calculate net price from tax-inclusive price
+        // selling_price = net_price + (net_price * tax_percent / 100)
+        // selling_price = net_price * (1 + tax_percent / 100)
+        // net_price = selling_price / (1 + tax_percent / 100)
+        $netPrice = $sellingPrice / (1 + $taxPercent / 100);
+        $taxAmount = $sellingPrice - $netPrice;
+        
+        return [
+            'net_price' => round($netPrice, 2),
+            'tax_amount' => round($taxAmount, 2)
+        ];
     }
 
     /**

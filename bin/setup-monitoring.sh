@@ -2,7 +2,7 @@
 
 ###############################################################################
 # Monitoring Setup Script
-# Sets up monitoring infrastructure for Karyalay Portal System
+# Sets up monitoring infrastructure for SellerPortal System
 ###############################################################################
 
 set -e
@@ -14,7 +14,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo "========================================="
-echo "Karyalay Portal - Monitoring Setup"
+echo "SellerPortal - Monitoring Setup"
 echo "========================================="
 echo ""
 

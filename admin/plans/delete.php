@@ -13,8 +13,9 @@ use Karyalay\Services\PlanService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and plans.delete permission
 require_admin();
+require_permission('plans.delete');
 
 // Initialize services
 $planService = new PlanService();
@@ -24,7 +25,7 @@ $planId = $_GET['id'] ?? '';
 
 if (empty($planId)) {
     $_SESSION['admin_error'] = 'Plan ID is required.';
-    header('Location: ' . get_base_url() . '/admin/plans.php');
+    header('Location: ' . get_app_base_url() . '/admin/plans.php');
     exit;
 }
 
@@ -33,7 +34,7 @@ $plan = $planService->read($planId);
 
 if (!$plan) {
     $_SESSION['admin_error'] = 'Plan not found.';
-    header('Location: ' . get_base_url() . '/admin/plans.php');
+    header('Location: ' . get_app_base_url() . '/admin/plans.php');
     exit;
 }
 
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate CSRF token
     if (!validateCsrfToken()) {
         $_SESSION['admin_error'] = 'Invalid security token. Please try again.';
-        header('Location: ' . get_base_url() . '/admin/plans.php');
+        header('Location: ' . get_app_base_url() . '/admin/plans.php');
         exit;
     }
 
@@ -54,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($activeSubscriptions > 0) {
         $_SESSION['admin_error'] = "Cannot delete plan with {$activeSubscriptions} active subscription(s). Please deactivate the plan instead.";
-        header('Location: ' . get_base_url() . '/admin/plans.php');
+        header('Location: ' . get_app_base_url() . '/admin/plans.php');
         exit;
     }
 
@@ -67,11 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin_error'] = 'Failed to delete plan. Please try again.';
     }
 
-    header('Location: ' . get_base_url() . '/admin/plans.php');
+    header('Location: ' . get_app_base_url() . '/admin/plans.php');
     exit;
 }
 
 // If GET request, show error message and redirect to plans list
 $_SESSION['admin_error'] = 'Delete action requires POST request. Please use the delete button from the edit page.';
-header('Location: ' . get_base_url() . '/admin/plans.php');
+header('Location: ' . get_app_base_url() . '/admin/plans.php');
 exit;

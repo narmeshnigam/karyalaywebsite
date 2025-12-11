@@ -232,9 +232,9 @@ class LargeDatasetTest extends TestCase
                 u.name as assigned_customer_name,
                 s.end_date as subscription_end_date
             FROM ports p
-            JOIN plans pl ON p.plan_id = pl.id
-            LEFT JOIN users u ON p.assigned_customer_id = u.id
             LEFT JOIN subscriptions s ON p.assigned_subscription_id = s.id
+            LEFT JOIN plans pl ON s.plan_id = pl.id
+            LEFT JOIN users u ON s.customer_id = u.id
             ORDER BY p.status, p.created_at DESC
             LIMIT 200
         ";

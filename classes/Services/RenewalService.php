@@ -60,7 +60,7 @@ class RenewalService
             $orderData = [
                 'customer_id' => $subscription['customer_id'],
                 'plan_id' => $plan['id'],
-                'amount' => $plan['price'],
+                'amount' => !empty($plan['discounted_price']) && $plan['discounted_price'] > 0 ? $plan['discounted_price'] : $plan['mrp'],
                 'currency' => $plan['currency'],
                 'status' => 'PENDING'
             ];
@@ -229,7 +229,7 @@ class RenewalService
                 'plan' => $plan,
                 'current_end_date' => $subscription['end_date'],
                 'new_end_date' => $newEndDate->format('Y-m-d'),
-                'renewal_amount' => $plan['price'],
+                'renewal_amount' => !empty($plan['discounted_price']) && $plan['discounted_price'] > 0 ? $plan['discounted_price'] : $plan['mrp'],
                 'currency' => $plan['currency'],
                 'billing_period_months' => $plan['billing_period_months']
             ];

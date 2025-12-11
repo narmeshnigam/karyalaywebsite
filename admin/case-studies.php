@@ -13,8 +13,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and case_studies.manage permission
 require_admin();
+require_permission('case_studies.manage');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -107,8 +108,7 @@ include_admin_header('Case Studies');
         <p class="admin-page-description">Manage case studies displayed on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/case-studies/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/case-studies/new.php" class="btn btn-primary">
             Create New Case Study
         </a>
     </div>
@@ -116,7 +116,7 @@ include_admin_header('Case Studies');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/case-studies.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -141,7 +141,7 @@ include_admin_header('Case Studies');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/case-studies.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/case-studies.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -153,7 +153,7 @@ include_admin_header('Case Studies');
         render_empty_state(
             'No case studies found',
             'Get started by creating your first case study',
-            get_base_url() . '/admin/case-studies/new.php',
+            get_app_base_url() . '/admin/case-studies/new.php',
             'Create Case Study'
         );
         ?>
@@ -201,12 +201,12 @@ include_admin_header('Case Studies');
                             <td><?php echo get_relative_time($case_study['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/case-studies/edit.php?id=<?php echo urlencode($case_study['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/case-studies/edit.php?id=<?php echo urlencode($case_study['id']); ?>" 
                                        class="btn btn-sm btn-secondary"
                                        title="Edit case study">
                                         Edit
                                     </a>
-                                    <a href="<?php echo get_base_url(); ?>/case-study/<?php echo urlencode($case_study['slug']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/case-study/<?php echo urlencode($case_study['slug']); ?>" 
                                        class="btn btn-sm btn-text"
                                        target="_blank"
                                        title="View on site">
@@ -224,7 +224,7 @@ include_admin_header('Case Studies');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = get_base_url() . '/admin/case-studies.php';
+                $base_url = get_app_base_url() . '/admin/case-studies.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);

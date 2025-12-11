@@ -32,6 +32,25 @@
   color: var(--color-primary-dark);
 }
 
+/* Brand Logo Styles */
+.site-logo .brand-logo-img,
+.site-logo .header-logo {
+  max-height: 28px;
+  max-width: 180px;
+  width: auto;
+  object-fit: contain;
+}
+
+.site-logo .brand-logo-text {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.site-logo:hover .brand-logo-text {
+  color: var(--color-primary-dark);
+}
+
 /* Main Navigation */
 .main-nav {
   display: none;

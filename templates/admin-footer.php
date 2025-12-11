@@ -4,7 +4,7 @@
             <footer class="admin-footer">
                 <div class="admin-footer-content">
                     <p class="admin-footer-text">
-                        &copy; <?php echo date('Y'); ?> Karyalay Admin Panel. All rights reserved.
+                        &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(get_brand_name()); ?> Admin Panel. All rights reserved.
                     </p>
                     <p class="admin-footer-version">
                         Version 1.0.0

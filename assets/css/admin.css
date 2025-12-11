@@ -43,9 +43,17 @@
   color: var(--color-white);
 }
 
-.admin-logo-text {
+.admin-logo-text,
+.admin-logo .brand-logo-text {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+}
+
+.admin-logo-img,
+.admin-logo .brand-logo-img {
+  max-height: 32px;
+  width: auto;
 }
 
 .admin-logo-badge {
@@ -75,16 +83,16 @@
 }
 
 .admin-nav-section {
-  margin-top: var(--spacing-6);
+  margin-top: var(--spacing-5);
 }
 
 .admin-nav-section-title {
   display: block;
   padding: var(--spacing-2) var(--spacing-6);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--color-gray-400);
 }
 
@@ -92,11 +100,16 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-6);
+  padding: var(--spacing-2) var(--spacing-6);
   color: var(--color-gray-300);
   text-decoration: none;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
+}
+
+/* Indented sub-items under sections */
+.admin-nav-subitem .admin-nav-link {
+  padding-left: calc(var(--spacing-6) + 12px);
 }
 
 .admin-nav-link:hover {
@@ -105,20 +118,24 @@
 }
 
 .admin-nav-link.active {
-  background-color: rgba(37, 99, 235, 0.1);
+  background-color: rgba(255, 255, 255, 0.08);
   color: var(--color-white);
   border-left-color: var(--color-primary);
 }
 
-.admin-nav-icon {
-  font-size: var(--font-size-lg);
-  width: 24px;
-  text-align: center;
+/* Dashboard link - bold styling */
+.admin-nav-link-dashboard {
+  padding-left: var(--spacing-6);
+}
+
+.admin-nav-link-dashboard .admin-nav-text {
+  font-weight: 700;
+  font-size: 0.9375rem;
 }
 
 .admin-nav-text {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: 0.9375rem;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Admin Sidebar Footer */

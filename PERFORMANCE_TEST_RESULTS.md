@@ -1,12 +1,12 @@
 # Performance Test Results
 
 **Test Date:** December 7, 2025  
-**System:** Karyalay Portal System  
+**System:** SellerPortal System  
 **Environment:** Development
 
 ## Executive Summary
 
-Performance testing has been completed for the Karyalay Portal System. The system demonstrates excellent performance across all tested areas:
+Performance testing has been completed for the SellerPortal System. The system demonstrates excellent performance across all tested areas:
 
 - ✅ **Database Queries:** All queries execute in < 100ms (target: < 100ms for simple queries)
 - ✅ **Memory Usage:** Peak memory usage at 6MB (target: < 128MB)
@@ -187,7 +187,7 @@ All tables have appropriate indexes:
 
 ## Conclusion
 
-The Karyalay Portal System demonstrates **excellent performance** across all tested areas:
+The SellerPortal System demonstrates **excellent performance** across all tested areas:
 
 1. **Database Performance:** All queries execute in milliseconds, well below target thresholds
 2. **Memory Efficiency:** Extremely low memory usage (< 6MB) with proper pagination

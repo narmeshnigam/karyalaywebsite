@@ -12,19 +12,20 @@ use Karyalay\Models\HeroSlide;
 
 startSecureSession();
 require_admin();
+require_permission('hero_slides.manage');
 
 $heroSlideModel = new HeroSlide();
 
 $id = $_GET['id'] ?? '';
 if (empty($id)) {
-    header('Location: ' . get_base_url() . '/admin/hero-slides.php');
+    header('Location: ' . get_app_base_url() . '/admin/hero-slides.php');
     exit;
 }
 
 $slide = $heroSlideModel->getById($id);
 if (!$slide) {
     $_SESSION['admin_error'] = 'Slide not found.';
-    header('Location: ' . get_base_url() . '/admin/hero-slides.php');
+    header('Location: ' . get_app_base_url() . '/admin/hero-slides.php');
     exit;
 }
 
@@ -54,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $heroSlideModel->update($id, $form_data);
             if ($result) {
                 $_SESSION['admin_success'] = 'Hero slide updated successfully!';
-                header('Location: ' . get_base_url() . '/admin/hero-slides.php');
+                header('Location: ' . get_app_base_url() . '/admin/hero-slides.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update hero slide.';
@@ -70,7 +71,7 @@ include_admin_header('Edit Hero Slide');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php">Hero Slides</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php">Hero Slides</a>
             <span class="breadcrumb-separator">/</span>
             <span>Edit Slide</span>
         </nav>
@@ -78,7 +79,7 @@ include_admin_header('Edit Hero Slide');
         <p class="admin-page-description">Update slide content and settings</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">← Back to Slides</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">← Back to Slides</a>
     </div>
 </div>
 
@@ -94,7 +95,7 @@ include_admin_header('Edit Hero Slide');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/hero-slides/edit.php?id=<?php echo urlencode($id); ?>" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/hero-slides/edit.php?id=<?php echo urlencode($id); ?>" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -170,7 +171,7 @@ include_admin_header('Edit Hero Slide');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Slide</button>
-            <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

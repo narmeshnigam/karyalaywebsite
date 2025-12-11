@@ -320,7 +320,7 @@ Recommended monitoring setup:
 
 ## Conclusion
 
-Performance testing has been successfully implemented for the Karyalay Portal System. The system demonstrates **excellent performance** across all tested areas:
+Performance testing has been successfully implemented for the SellerPortal System. The system demonstrates **excellent performance** across all tested areas:
 
 - ✅ All 21 performance tests passing
 - ✅ Query execution times well below targets

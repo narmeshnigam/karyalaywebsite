@@ -11,6 +11,7 @@ use Karyalay\Models\WhyChooseCard;
 
 startSecureSession();
 require_admin();
+require_permission('why_choose.manage');
 
 $cardModel = new WhyChooseCard();
 
@@ -41,15 +42,14 @@ include_admin_header('Why Choose Cards');
         <p class="admin-page-description">Manage "Why Choose Karyalay" section cards (max 6 displayed)</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards/new.php" class="btn btn-primary">
             Add New Card
         </a>
     </div>
 </div>
 
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/why-choose-cards.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/why-choose-cards.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input type="text" id="search" name="search" class="admin-filter-input" 
@@ -69,7 +69,7 @@ include_admin_header('Why Choose Cards');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -127,9 +127,9 @@ include_admin_header('Why Choose Cards');
                             <td><?php echo get_relative_time($card['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards/edit.php?id=<?php echo urlencode($card['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards/edit.php?id=<?php echo urlencode($card['id']); ?>" 
                                        class="btn btn-sm btn-secondary">Edit</a>
-                                    <a href="<?php echo get_base_url(); ?>/admin/why-choose-cards/delete.php?id=<?php echo urlencode($card['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/why-choose-cards/delete.php?id=<?php echo urlencode($card['id']); ?>" 
                                        class="btn btn-sm btn-text btn-danger"
                                        onclick="return confirm('Are you sure you want to delete this card?');">Delete</a>
                                 </div>
@@ -181,8 +181,8 @@ include_admin_header('Why Choose Cards');
 .link-preview:hover { text-decoration: underline; }
 .table-actions { display: flex; gap: var(--spacing-2); }
 .btn-icon { margin-right: var(--spacing-1); }
-.btn-danger { color: #dc2626; }
-.btn-danger:hover { background-color: #fee2e2; }
+.btn-danger { background-color: #dc2626 !important; color: white !important; border: 1px solid #dc2626 !important; }
+.btn-danger:hover { background-color: #991b1b !important; border-color: #991b1b !important; color: white !important; }
 .admin-card-footer { padding: var(--spacing-4); border-top: 1px solid var(--color-gray-200); }
 .admin-card-footer-text { font-size: var(--font-size-sm); color: var(--color-gray-600); margin: 0; }
 @media (max-width: 768px) { .admin-page-header { flex-direction: column; } .admin-filters-form { flex-direction: column; } .admin-filter-group { width: 100%; } }

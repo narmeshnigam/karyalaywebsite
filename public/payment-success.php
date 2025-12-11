@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Payment Success Page
  */
 
@@ -23,17 +23,35 @@ if ($config['debug']) {
 // Load authentication helpers
 require_once __DIR__ . '/../includes/auth_helpers.php';
 
+// Include template helpers (needed for get_base_url)
+require_once __DIR__ . '/../includes/template_helpers.php';
+
 // Start secure session
 startSecureSession();
 
 // Check if user is logged in
 if (!isLoggedIn()) {
-    header('Location: /karyalayportal/login.php');
+    header('Location: ' . get_base_url() . '/login.php');
     exit;
 }
 
-// Include template helpers
-require_once __DIR__ . '/../includes/template_helpers.php';
+use Karyalay\Services\SubscriptionService;
+
+// Get current user
+$currentUser = getCurrentUser();
+$subscriptionDetails = null;
+$portAssigned = false;
+$instanceUrl = '';
+
+if ($currentUser) {
+    $subscriptionService = new SubscriptionService();
+    $subscriptionDetails = $subscriptionService->getActiveSubscriptionForCustomer($currentUser['id']);
+    
+    if ($subscriptionDetails && $subscriptionDetails['port']) {
+        $portAssigned = true;
+        $instanceUrl = $subscriptionDetails['port']['instance_url'];
+    }
+}
 
 // Set page variables
 $page_title = 'Payment Successful';
@@ -43,49 +61,74 @@ $page_description = 'Your payment was successful';
 include_header($page_title, $page_description);
 ?>
 
-<!-- Payment Success Page -->
-<section class="section">
+<section class="section" style="padding: 4rem 0;">
     <div class="container">
-        <div class="max-w-2xl mx-auto text-center">
-            <div class="mb-6">
-                <svg class="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+        <div style="max-width: 600px; margin: 0 auto; text-align: center;">
+            <div style="margin-bottom: 2rem;">
+                <div style="width: 80px; height: 80px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <svg width="40" height="40" fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
             </div>
             
-            <h1 class="text-3xl font-bold mb-4">Payment Successful!</h1>
+            <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1rem; color: #1f2937;">Payment Successful!</h1>
             
-            <p class="text-lg text-gray-600 mb-6">
-                Thank you for your purchase. Your subscription is being activated and you will receive a confirmation email shortly.
+            <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 1.5rem;">
+                Thank you for your purchase. Your subscription is now active.
             </p>
             
             <?php if (isset($_GET['payment_id'])): ?>
-                <p class="text-sm text-gray-500 mb-6">
-                    Payment ID: <?php echo htmlspecialchars($_GET['payment_id']); ?>
+                <p style="font-size: 0.875rem; color: #9ca3af; margin-bottom: 1.5rem;">
+                    Payment ID: <code style="background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px;"><?php echo htmlspecialchars($_GET['payment_id']); ?></code>
                 </p>
             <?php endif; ?>
-            
-            <div class="alert alert-info mb-6">
-                <p>
+
+            <?php if ($portAssigned && $instanceUrl): ?>
+                <div class="alert alert-success" style="margin-bottom: 2rem; text-align: left;">
+                    <strong>🎉 Your Instance is Ready!</strong><br>
+                    <p style="margin: 0.5rem 0;">Your Karyalay instance has been provisioned:</p>
+                    <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem; font-family: monospace;">
+                        <?php echo htmlspecialchars($instanceUrl); ?>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-info" style="margin-bottom: 2rem; text-align: left;">
                     <strong>What's Next?</strong><br>
-                    Your Karyalay instance is being provisioned. You will receive an email with setup instructions and your instance URL within the next few minutes.
-                </p>
-            </div>
+                    Your instance is being provisioned. You will receive an email with setup instructions shortly.
+                </div>
+            <?php endif; ?>
             
-            <div class="flex gap-4 justify-center">
-                <a href="/karyalayportal/app/dashboard.php" class="btn btn-primary btn-lg">
-                    Go to Dashboard
-                </a>
-                <a href="/karyalayportal/index.php" class="btn btn-outline btn-lg">
-                    Back to Home
-                </a>
+            <?php if ($subscriptionDetails && $subscriptionDetails['plan']): ?>
+                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; text-align: left;">
+                    <h3 style="margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: #374151;">Subscription Summary</h3>
+                    <div style="display: grid; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #6b7280;">Plan</span>
+                            <span style="font-weight: 500; color: #111827;"><?php echo htmlspecialchars($subscriptionDetails['plan']['name']); ?></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #6b7280;">Status</span>
+                            <span style="font-weight: 500; color: #059669;">Active</span>
+                        </div>
+                        <?php if ($subscriptionDetails['subscription']['end_date']): ?>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #6b7280;">Valid Until</span>
+                                <span style="font-weight: 500; color: #111827;"><?php echo date('M d, Y', strtotime($subscriptionDetails['subscription']['end_date'])); ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="<?php echo get_app_base_url(); ?>/app/dashboard.php" class="btn btn-primary btn-lg">Go to Dashboard</a>
+                <?php if ($portAssigned): ?>
+                    <a href="<?php echo get_app_base_url(); ?>/app/my-port.php" class="btn btn-outline btn-lg">View My Port</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </section>
 
-<?php
-// Include footer
-include_footer();
-?>
-
+<?php include_footer(); ?>

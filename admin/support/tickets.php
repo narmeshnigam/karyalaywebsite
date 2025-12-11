@@ -14,8 +14,9 @@ use Karyalay\Models\User;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and tickets.view permission
 require_admin();
+require_permission('tickets.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -163,12 +164,20 @@ try {
 
 // Include admin header
 include_admin_header('Support Tickets');
+
+// Include export button helper
+require_once __DIR__ . '/../../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <h1 class="admin-page-title">Support Tickets</h1>
         <p class="admin-page-description">Manage customer support tickets and inquiries</p>
+    </div>
+    <div class="admin-page-header-actions">
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-tickets.php'); ?>
     </div>
 </div>
 
@@ -251,9 +260,32 @@ include_admin_header('Support Tickets');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="/karyalayportal/admin/support/tickets.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets.php" class="btn btn-text">Clear</a>
         </div>
     </form>
+</div>
+
+<!-- Priority Legend -->
+<div class="priority-legend">
+    <div class="legend-title">Priority Guide:</div>
+    <div class="legend-items">
+        <div class="legend-item">
+            <span class="badge badge-danger">Urgent</span>
+            <span class="legend-desc">Requires immediate attention</span>
+        </div>
+        <div class="legend-item">
+            <span class="badge badge-warning">High</span>
+            <span class="legend-desc">Important, needs quick response</span>
+        </div>
+        <div class="legend-item">
+            <span class="badge badge-info">Medium</span>
+            <span class="legend-desc">Standard priority</span>
+        </div>
+        <div class="legend-item">
+            <span class="badge badge-secondary">Low</span>
+            <span class="legend-desc">Can be addressed later</span>
+        </div>
+    </div>
 </div>
 
 <!-- Tickets Table -->
@@ -285,7 +317,11 @@ include_admin_header('Support Tickets');
                 </thead>
                 <tbody>
                     <?php foreach ($tickets as $ticket): ?>
-                        <tr>
+                        <tr class="ticket-row <?php 
+                            if ($ticket['priority'] === 'URGENT') echo 'ticket-urgent';
+                            elseif ($ticket['priority'] === 'HIGH') echo 'ticket-high';
+                            if ($ticket['status'] === 'OPEN') echo ' ticket-open';
+                        ?>">
                             <td>
                                 <code class="code-inline"><?php echo htmlspecialchars(substr($ticket['id'], 0, 8)); ?></code>
                             </td>
@@ -311,7 +347,18 @@ include_admin_header('Support Tickets');
                                     <span class="text-muted">Unknown</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo get_status_badge($ticket['status']); ?></td>
+                            <td>
+                                <?php 
+                                $status_config = [
+                                    'OPEN' => 'danger',
+                                    'IN_PROGRESS' => 'warning',
+                                    'WAITING_ON_CUSTOMER' => 'info',
+                                    'RESOLVED' => 'success',
+                                    'CLOSED' => 'secondary'
+                                ];
+                                echo get_status_badge($ticket['status'], $status_config); 
+                                ?>
+                            </td>
                             <td>
                                 <?php 
                                 $priority_config = [
@@ -340,7 +387,7 @@ include_admin_header('Support Tickets');
                             <td><?php echo get_relative_time($ticket['updated_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="/karyalayportal/admin/support/tickets/view.php?id=<?php echo urlencode($ticket['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets/view.php?id=<?php echo urlencode($ticket['id']); ?>" 
                                        class="btn btn-sm btn-primary"
                                        title="View ticket">
                                         View
@@ -427,6 +474,40 @@ include_admin_header('Support Tickets');
     margin-bottom: var(--spacing-6);
 }
 
+.priority-legend {
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+.legend-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-700);
+}
+
+.legend-items {
+    display: flex;
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.legend-desc {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+}
+
 .admin-filters-form {
     display: flex;
     gap: var(--spacing-4);
@@ -505,6 +586,155 @@ include_admin_header('Support Tickets');
     margin: 0;
 }
 
+/* Enhanced Badge Styling for Better Differentiation */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+}
+
+/* Status Badges - Clear Visual Hierarchy */
+.badge-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.badge-secondary {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+/* Priority-specific enhancements */
+.badge-danger {
+    animation: pulse-danger 2s ease-in-out infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+    }
+}
+
+/* Hover effects for better interactivity */
+.admin-table tbody tr:hover .badge {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* Row highlighting for priority tickets */
+.ticket-row {
+    transition: all 0.2s ease;
+}
+
+.ticket-urgent {
+    border-left: 4px solid #dc2626;
+    background-color: #fef2f2;
+}
+
+.ticket-urgent:hover {
+    background-color: #fee2e2;
+}
+
+.ticket-high {
+    border-left: 4px solid #f59e0b;
+    background-color: #fffbeb;
+}
+
+.ticket-high:hover {
+    background-color: #fef3c7;
+}
+
+.ticket-open {
+    font-weight: 500;
+}
+
+
+
+/* Table responsive handling */
+.admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+    min-width: 100%;
+    table-layout: auto;
+}
+
+/* Allow text wrapping for content columns */
+.admin-table td {
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Set max-widths for columns that can have long content */
+.admin-table td:nth-child(2) { /* Subject */
+    max-width: 300px;
+}
+
+.admin-table td:nth-child(3) { /* Customer */
+    max-width: 200px;
+}
+
+.admin-table td:nth-child(7) { /* Assignee */
+    max-width: 150px;
+}
+
+/* Keep action buttons and badges from wrapping */
+.admin-table td:nth-child(1), /* Ticket ID */
+.admin-table td:nth-child(4), /* Status */
+.admin-table td:nth-child(5), /* Priority */
+.admin-table td:nth-child(6), /* Category */
+.admin-table td:nth-child(8), /* Last Updated */
+.admin-table td:nth-child(9) { /* Actions */
+    white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+    .admin-table td:nth-child(2) {
+        max-width: 250px;
+    }
+    
+    .admin-table td:nth-child(3) {
+        max-width: 180px;
+    }
+    
+    .admin-table td:nth-child(7) {
+        max-width: 120px;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-page-header {
         flex-direction: column;
@@ -518,8 +748,41 @@ include_admin_header('Support Tickets');
         width: 100%;
     }
     
-    .admin-table-container {
-        overflow-x: auto;
+    .admin-table th,
+    .admin-table td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-2);
+    }
+    
+    .admin-table td:nth-child(2) {
+        max-width: 150px;
+    }
+    
+    .admin-table td:nth-child(3) {
+        max-width: 120px;
+    }
+    
+    .admin-table td:nth-child(7) {
+        max-width: 100px;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .legend-items {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+    
+    .legend-desc {
+        font-size: 0.7rem;
+    }
+    
+    .table-cell-primary,
+    .table-cell-secondary {
+        font-size: 0.8rem;
     }
 }
 </style>

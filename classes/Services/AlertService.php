@@ -193,7 +193,7 @@ class AlertService
                             'short' => true,
                         ],
                     ],
-                    'footer' => 'Karyalay Portal System',
+                    'footer' => 'Portal System',
                     'ts' => time(),
                 ],
             ],

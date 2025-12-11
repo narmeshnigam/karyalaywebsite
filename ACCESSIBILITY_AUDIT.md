@@ -1,5 +1,5 @@
 # Accessibility Audit Report
-## Karyalay Portal System
+## SellerPortal System
 
 **Date:** December 7, 2025  
 **Auditor:** Automated Accessibility Testing  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This accessibility audit evaluates the Karyalay Portal System against WCAG 2.1 Level AA standards. The audit covers three main areas:
+This accessibility audit evaluates the SellerPortal System against WCAG 2.1 Level AA standards. The audit covers three main areas:
 1. Screen reader compatibility
 2. Keyboard navigation
 3. Color contrast ratios
@@ -454,7 +454,7 @@ Accessible form implementation demonstrated in:
 
 ## 9. Conclusion
 
-The Karyalay Portal System demonstrates **excellent accessibility compliance** with WCAG 2.1 Level AA standards. The system properly implements:
+The SellerPortal System demonstrates **excellent accessibility compliance** with WCAG 2.1 Level AA standards. The system properly implements:
 
 1. **Screen Reader Support:** All content is accessible to screen readers with proper ARIA attributes and semantic HTML
 2. **Keyboard Navigation:** Complete keyboard accessibility with visible focus indicators

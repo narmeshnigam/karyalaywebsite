@@ -11,6 +11,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // Include required files
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/template_helpers.php';
 
 use Karyalay\Models\User;
 
@@ -66,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_type'] = 'success';
                 
                 // Redirect to prevent form resubmission
-                header('Location: /app/security.php');
+                header('Location: ' . get_app_base_url() . '/app/security.php');
                 exit;
             } else {
                 $errors[] = $result['error'] ?? 'Failed to change password. Please try again.';
@@ -94,7 +95,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
 
 <?php if (!empty($errors)): ?>
     <div class="alert alert-error" role="alert">
-        <ul style="margin: 0; padding-left: 1.5rem;">
+        <ul>
             <?php foreach ($errors as $error): ?>
                 <li><?php echo htmlspecialchars($error); ?></li>
             <?php endforeach; ?>
@@ -104,15 +105,15 @@ require_once __DIR__ . '/../templates/customer-header.php';
 
 <div class="info-box">
     <h3 class="info-box-title">Change Password</h3>
-    <p class="info-box-description" style="margin-bottom: 1.5rem; color: var(--color-gray-600);">
+    <p class="info-box-description" style="margin-bottom: 1.5rem;">
         Update your password to keep your account secure. Your password must be at least 8 characters long.
     </p>
     
-    <form method="POST" action="/app/security.php" style="max-width: 500px;">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/app/security.php" style="max-width: 500px;">
         <?php echo csrfField(); ?>
         
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="current_password" class="form-label">Current Password <span style="color: red;">*</span></label>
+        <div class="form-group">
+            <label for="current_password" class="form-label">Current Password <span style="color: #dc2626;">*</span></label>
             <input 
                 type="password" 
                 id="current_password" 
@@ -124,8 +125,8 @@ require_once __DIR__ . '/../templates/customer-header.php';
             >
         </div>
         
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="new_password" class="form-label">New Password <span style="color: red;">*</span></label>
+        <div class="form-group">
+            <label for="new_password" class="form-label">New Password <span style="color: #dc2626;">*</span></label>
             <input 
                 type="password" 
                 id="new_password" 
@@ -137,13 +138,13 @@ require_once __DIR__ . '/../templates/customer-header.php';
                 autocomplete="new-password"
                 minlength="8"
             >
-            <small id="password-help" style="display: block; margin-top: 0.25rem; color: var(--color-gray-600);">
+            <small id="password-help" class="form-help-text">
                 Must be at least 8 characters long
             </small>
         </div>
         
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="confirm_password" class="form-label">Confirm New Password <span style="color: red;">*</span></label>
+        <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm New Password <span style="color: #dc2626;">*</span></label>
             <input 
                 type="password" 
                 id="confirm_password" 
@@ -158,7 +159,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
         
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
             <button type="submit" class="btn btn-primary">Change Password</button>
-            <a href="/app/dashboard.php" class="btn btn-outline">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/app/dashboard.php" class="btn btn-outline">Cancel</a>
         </div>
     </form>
 </div>
@@ -194,7 +195,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
 </div>
 
 <div class="quick-actions" style="margin-top: 2rem;">
-    <a href="/app/profile.php" class="btn btn-outline">Back to Profile</a>
+    <a href="<?php echo get_app_base_url(); ?>/app/profile.php" class="btn btn-outline">Back to Profile</a>
 </div>
 
 <?php

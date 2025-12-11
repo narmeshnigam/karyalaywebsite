@@ -16,8 +16,9 @@ use Karyalay\Models\User;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and subscriptions.view permission
 require_admin();
+require_permission('subscriptions.view');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -30,6 +31,7 @@ $userModel = new User();
 // Get filters from query parameters
 $status_filter = $_GET['status'] ?? '';
 $plan_filter = $_GET['plan'] ?? '';
+$customer_filter = $_GET['customer'] ?? '';
 $date_from = $_GET['date_from'] ?? '';
 $date_to = $_GET['date_to'] ?? '';
 $search_query = $_GET['search'] ?? '';
@@ -52,6 +54,11 @@ if (!empty($status_filter) && in_array($status_filter, ['ACTIVE', 'EXPIRED', 'CA
 if (!empty($plan_filter)) {
     $count_sql .= " AND plan_id = :plan_id";
     $count_params[':plan_id'] = $plan_filter;
+}
+
+if (!empty($customer_filter)) {
+    $count_sql .= " AND customer_id = :customer_id";
+    $count_params[':customer_id'] = $customer_filter;
 }
 
 if (!empty($date_from)) {
@@ -85,12 +92,12 @@ try {
 // Build query for fetching subscriptions with joins
 $sql = "SELECT s.*, 
         p.name as plan_name,
-        p.price as plan_price,
+        COALESCE(NULLIF(p.discounted_price, 0), p.mrp) as plan_price,
         p.currency as plan_currency,
         u.name as customer_name,
         u.email as customer_email,
         port.instance_url as port_url,
-        port.port_number as port_number
+        port.db_name as port_db_name
         FROM subscriptions s
         LEFT JOIN plans p ON s.plan_id = p.id
         LEFT JOIN users u ON s.customer_id = u.id
@@ -106,6 +113,11 @@ if (!empty($status_filter)) {
 if (!empty($plan_filter)) {
     $sql .= " AND s.plan_id = :plan_id";
     $params[':plan_id'] = $plan_filter;
+}
+
+if (!empty($customer_filter)) {
+    $sql .= " AND s.customer_id = :customer_id";
+    $params[':customer_id'] = $customer_filter;
 }
 
 if (!empty($date_from)) {
@@ -126,6 +138,11 @@ if (!empty($search_query)) {
 $sql .= " ORDER BY s.created_at DESC LIMIT :limit OFFSET :offset";
 
 try {
+    error_log("=== SUBSCRIPTIONS DEBUG ===");
+    error_log("SQL: " . $sql);
+    error_log("Params: " . json_encode($params));
+    error_log("Limit: " . $per_page . ", Offset: " . $offset);
+    
     $stmt = $db->prepare($sql);
     
     foreach ($params as $key => $value) {
@@ -136,25 +153,41 @@ try {
     
     $stmt->execute();
     $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("Fetched " . count($subscriptions) . " subscriptions");
+    error_log("Total subscriptions count: " . $total_subscriptions);
+    error_log("==========================");
 } catch (PDOException $e) {
     error_log("Subscriptions list error: " . $e->getMessage());
+    error_log("SQL: " . $sql);
     $subscriptions = [];
 }
 
 // Include admin header
 include_admin_header('Subscriptions');
+
+// Include export button helper
+require_once __DIR__ . '/../includes/export_button_helper.php';
 ?>
+
+<?php render_export_button_styles(); ?>
 
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <h1 class="admin-page-title">Subscription Management</h1>
         <p class="admin-page-description">View and manage customer subscriptions</p>
     </div>
+    <div class="admin-page-header-actions">
+        <?php render_export_button(get_app_base_url() . '/admin/api/export-subscriptions.php'); ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions/new.php" class="btn btn-primary">
+            Create Subscription
+        </a>
+    </div>
 </div>
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="/admin/subscriptions.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/subscriptions.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -191,6 +224,23 @@ include_admin_header('Subscriptions');
             </select>
         </div>
         
+        <?php if (!empty($customer_filter)): ?>
+        <?php 
+        // Get customer name for display
+        $selectedCustomer = $userModel->findById($customer_filter);
+        ?>
+        <div class="admin-filter-group">
+            <label for="customer" class="admin-filter-label">Customer</label>
+            <div class="selected-customer-filter">
+                <span class="selected-customer-name">
+                    <?php echo htmlspecialchars($selectedCustomer['name'] ?? 'Unknown Customer'); ?>
+                </span>
+                <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions.php" class="remove-customer-filter" title="Remove customer filter">×</a>
+            </div>
+            <input type="hidden" name="customer" value="<?php echo htmlspecialchars($customer_filter); ?>">
+        </div>
+        <?php endif; ?>
+        
         <div class="admin-filter-group">
             <label for="date_from" class="admin-filter-label">Expiry From</label>
             <input 
@@ -215,7 +265,7 @@ include_admin_header('Subscriptions');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="/karyalayportal/admin/subscriptions.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -254,27 +304,30 @@ include_admin_header('Subscriptions');
                             </td>
                             <td>
                                 <?php if ($subscription['customer_name']): ?>
-                                    <div class="table-cell-primary">
-                                        <?php echo htmlspecialchars($subscription['customer_name']); ?>
-                                    </div>
-                                    <div class="table-cell-secondary">
-                                        <?php echo htmlspecialchars($subscription['customer_email']); ?>
-                                    </div>
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/customers/view.php?id=<?php echo urlencode($subscription['customer_id']); ?>" class="table-link">
+                                        <div class="table-cell-primary">
+                                            <?php echo htmlspecialchars($subscription['customer_name']); ?>
+                                        </div>
+                                        <div class="table-cell-secondary">
+                                            <?php echo htmlspecialchars($subscription['customer_email']); ?>
+                                        </div>
+                                    </a>
                                 <?php else: ?>
                                     <span class="text-muted">Unknown</span>
                                 <?php endif; ?>
                             </td>
                             <td>
                                 <?php if ($subscription['plan_name']): ?>
-                                    <div class="table-cell-primary">
-                                        <?php echo htmlspecialchars($subscription['plan_name']); ?>
-                                    </div>
-                                    <?php if ($subscription['plan_price']): ?>
-                                        <div class="table-cell-secondary">
-                                            <?php echo htmlspecialchars($subscription['plan_currency']); ?> 
-                                            <?php echo number_format($subscription['plan_price'], 2); ?>
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/plans/view.php?id=<?php echo urlencode($subscription['plan_id']); ?>" class="table-link">
+                                        <div class="table-cell-primary">
+                                            <?php echo htmlspecialchars($subscription['plan_name']); ?>
                                         </div>
-                                    <?php endif; ?>
+                                        <?php if ($subscription['plan_price']): ?>
+                                            <div class="table-cell-secondary">
+                                                <?php echo format_price($subscription['plan_price']); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </a>
                                 <?php else: ?>
                                     <span class="text-muted">No plan</span>
                                 <?php endif; ?>
@@ -299,26 +352,24 @@ include_admin_header('Subscriptions');
                             <td><?php echo get_status_badge($subscription['status']); ?></td>
                             <td>
                                 <?php if ($subscription['port_url']): ?>
-                                    <div class="table-cell-primary">
-                                        <?php echo htmlspecialchars($subscription['port_url']); ?>
-                                    </div>
-                                    <?php if ($subscription['port_number']): ?>
-                                        <div class="table-cell-secondary">
-                                            Port: <?php echo htmlspecialchars($subscription['port_number']); ?>
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/ports/view.php?id=<?php echo urlencode($subscription['assigned_port_id']); ?>" class="table-link">
+                                        <div class="table-cell-primary">
+                                            <?php echo htmlspecialchars($subscription['port_url']); ?>
                                         </div>
-                                    <?php endif; ?>
+                                        <?php if ($subscription['port_db_name']): ?>
+                                            <div class="table-cell-secondary">
+                                                DB: <?php echo htmlspecialchars($subscription['port_db_name']); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </a>
                                 <?php else: ?>
                                     <span class="text-muted">No port assigned</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="table-actions">
-                                    <a href="/karyalayportal/admin/customers/view.php?id=<?php echo urlencode($subscription['customer_id']); ?>" 
-                                       class="btn btn-sm btn-secondary"
-                                       title="View customer">
-                                        View Customer
-                                    </a>
-                                </div>
+                                <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions/view.php?id=<?php echo urlencode($subscription['id']); ?>" class="btn btn-text btn-sm">
+                                    View Details
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -330,7 +381,7 @@ include_admin_header('Subscriptions');
         <?php if ($total_pages > 1): ?>
             <div class="admin-card-footer">
                 <?php 
-                $base_url = '/admin/subscriptions.php';
+                $base_url = get_app_base_url() . '/admin/subscriptions.php';
                 $query_params = [];
                 if (!empty($status_filter)) {
                     $query_params[] = 'status=' . urlencode($status_filter);
@@ -346,6 +397,9 @@ include_admin_header('Subscriptions');
                 }
                 if (!empty($search_query)) {
                     $query_params[] = 'search=' . urlencode($search_query);
+                }
+                if (!empty($customer_filter)) {
+                    $query_params[] = 'customer=' . urlencode($customer_filter);
                 }
                 if (!empty($query_params)) {
                     $base_url .= '?' . implode('&', $query_params);
@@ -374,6 +428,15 @@ include_admin_header('Subscriptions');
 
 .admin-page-header-content {
     flex: 1;
+}
+
+.admin-page-header-actions {
+    display: flex;
+    gap: var(--spacing-3);
+}
+
+.btn-icon {
+    margin-right: var(--spacing-1);
 }
 
 .admin-page-title {
@@ -439,15 +502,64 @@ include_admin_header('Subscriptions');
     gap: var(--spacing-2);
 }
 
+/* Table Layout */
+.admin-table-container {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.admin-table th,
+.admin-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Column widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) { width: 100px; } /* Subscription ID */
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) { width: 160px; } /* Customer */
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) { width: 120px; } /* Plan */
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) { width: 90px; } /* Start Date */
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) { width: 100px; white-space: normal; } /* End Date */
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) { width: 100px; } /* Status */
+
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) { width: 160px; } /* Assigned Port */
+
+.admin-table th:nth-child(8),
+.admin-table td:nth-child(8) { width: 100px; } /* Actions */
+
 .table-cell-primary {
     font-weight: var(--font-weight-semibold);
     color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .table-cell-secondary {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
-    margin-top: var(--spacing-1);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .code-inline {
@@ -474,15 +586,66 @@ include_admin_header('Subscriptions');
     font-weight: var(--font-weight-semibold);
 }
 
-.table-actions {
-    display: flex;
-    gap: var(--spacing-2);
+.table-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.table-link:hover .table-cell-primary {
+    color: var(--color-primary);
+}
+
+.table-link:hover {
+    background-color: transparent;
 }
 
 .admin-card-footer-text {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
     margin: 0;
+}
+
+.selected-customer-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: var(--color-blue-50);
+    border: 1px solid var(--color-blue-200);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+}
+
+.selected-customer-name {
+    color: var(--color-blue-800);
+    font-weight: var(--font-weight-semibold);
+}
+
+.remove-customer-filter {
+    color: var(--color-blue-600);
+    text-decoration: none;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    margin-left: var(--spacing-2);
+    padding: 0 var(--spacing-1);
+}
+
+.remove-customer-filter:hover {
+    color: var(--color-blue-800);
+    background-color: var(--color-blue-100);
+    border-radius: var(--radius-sm);
+}
+
+@media (max-width: 1200px) {
+    .admin-table {
+        table-layout: auto;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        white-space: normal;
+    }
 }
 
 @media (max-width: 768px) {
@@ -496,10 +659,6 @@ include_admin_header('Subscriptions');
     
     .admin-filter-group {
         width: 100%;
-    }
-    
-    .admin-table-container {
-        overflow-x: auto;
     }
 }
 </style>

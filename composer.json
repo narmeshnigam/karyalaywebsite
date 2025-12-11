@@ -1,6 +1,6 @@
 {
     "name": "karyalay/portal-system",
-    "description": "Karyalay Portal System - A comprehensive web application with public site, customer portal, and admin panel",
+    "description": "SellerPortal System - A comprehensive web application with public site, customer portal, and admin panel",
     "type": "project",
     "require": {
         "php": ">=8.0",

@@ -151,10 +151,11 @@ class Seeder
                 'name' => 'Basic Plan',
                 'slug' => 'basic',
                 'description' => 'Perfect for small businesses getting started',
-                'price' => 29.99,
+                'mrp' => 29.99,
+                'discounted_price' => null,
                 'currency' => 'USD',
                 'billing_period_months' => 1,
-                'features' => json_encode(['5 Users', '10GB Storage', 'Email Support']),
+                'features_html' => '<ul><li>5 Users</li><li>10GB Storage</li><li>Email Support</li></ul>',
                 'status' => 'ACTIVE'
             ],
             [
@@ -162,10 +163,11 @@ class Seeder
                 'name' => 'Professional Plan',
                 'slug' => 'professional',
                 'description' => 'For growing businesses with advanced needs',
-                'price' => 79.99,
+                'mrp' => 79.99,
+                'discounted_price' => null,
                 'currency' => 'USD',
                 'billing_period_months' => 1,
-                'features' => json_encode(['25 Users', '100GB Storage', 'Priority Support', 'Advanced Analytics']),
+                'features_html' => '<ul><li>25 Users</li><li>100GB Storage</li><li>Priority Support</li><li>Advanced Analytics</li></ul>',
                 'status' => 'ACTIVE'
             ],
             [
@@ -173,17 +175,18 @@ class Seeder
                 'name' => 'Enterprise Plan',
                 'slug' => 'enterprise',
                 'description' => 'For large organizations requiring maximum capacity',
-                'price' => 199.99,
+                'mrp' => 199.99,
+                'discounted_price' => null,
                 'currency' => 'USD',
                 'billing_period_months' => 1,
-                'features' => json_encode(['Unlimited Users', '1TB Storage', '24/7 Support', 'Custom Integration', 'Dedicated Account Manager']),
+                'features_html' => '<ul><li>Unlimited Users</li><li>1TB Storage</li><li>24/7 Support</li><li>Custom Integration</li><li>Dedicated Account Manager</li></ul>',
                 'status' => 'ACTIVE'
             ]
         ];
 
         $stmt = $this->pdo->prepare(
-            "INSERT INTO plans (id, name, slug, description, price, currency, billing_period_months, features, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO plans (id, name, slug, description, mrp, discounted_price, currency, billing_period_months, features_html, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         $planIds = [];
@@ -193,10 +196,11 @@ class Seeder
                 $plan['name'],
                 $plan['slug'],
                 $plan['description'],
-                $plan['price'],
+                $plan['mrp'],
+                $plan['discounted_price'],
                 $plan['currency'],
                 $plan['billing_period_months'],
-                $plan['features'],
+                $plan['features_html'],
                 $plan['status']
             ]);
             $planIds[$plan['slug']] = $plan['id'];

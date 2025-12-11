@@ -17,8 +17,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start session
 session_start();
 
-// Require admin authentication
+// Require admin authentication and blog.manage permission
 require_admin();
+require_permission('blog.manage');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -33,7 +34,7 @@ $contentService = new ContentService();
 $csrfMiddleware = new CsrfMiddleware();
 
 // Validate CSRF token
-if (!$csrfMiddleware->validateToken($_POST['csrf_token'] ?? '')) {
+if (!$csrfMiddleware->validate()) {
     $_SESSION['flash_message'] = 'Invalid security token. Please try again.';
     $_SESSION['flash_type'] = 'danger';
     header('Location: /admin/blog.php');

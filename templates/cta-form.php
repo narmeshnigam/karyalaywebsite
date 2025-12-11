@@ -10,7 +10,7 @@
  */
 
 $cta_title = $cta_title ?? "Ready to Transform Your Business?";
-$cta_subtitle = $cta_subtitle ?? "Get in touch with us today and discover how Karyalay can streamline your operations";
+$cta_subtitle = $cta_subtitle ?? "Get in touch with us today and discover how " . get_brand_name() . " can streamline your operations";
 $cta_source = $cta_source ?? ($_SERVER['REQUEST_URI'] ?? 'unknown');
 ?>
 
@@ -61,7 +61,13 @@ $cta_source = $cta_source ?? ($_SERVER['REQUEST_URI'] ?? 'unknown');
                     </div>
                     
                     <div class="cta-form-group">
-                        <input type="tel" name="phone" class="cta-form-input" placeholder="Phone Number">
+                        <?php echo render_phone_input([
+                            'id' => 'cta-phone',
+                            'name' => 'phone',
+                            'value' => '',
+                            'required' => false,
+                            'class' => 'cta-phone-wrapper',
+                        ]); ?>
                     </div>
                     
                     <div class="cta-form-group">
@@ -195,6 +201,25 @@ $cta_source = $cta_source ?? ($_SERVER['REQUEST_URI'] ?? 'unknown');
 
 .cta-form-group {
     margin-bottom: var(--spacing-4);
+}
+
+/* Phone input wrapper styling for CTA form */
+.cta-phone-wrapper {
+    border: 2px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+}
+
+.cta-phone-wrapper:focus-within {
+    border-color: #1e293b;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
+}
+
+.cta-phone-wrapper .phone-isd-prefix {
+    background: var(--color-gray-100);
+}
+
+.cta-phone-wrapper .phone-input-field {
+    padding: var(--spacing-3);
 }
 
 .cta-form-input,

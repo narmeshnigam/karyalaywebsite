@@ -78,7 +78,7 @@ include __DIR__ . '/../templates/admin-header.php';
     <div class="page-header">
         <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
         <div class="page-actions">
-            <a href="/karyalayportal/admin/monitoring.php?action=clear_logs" class="btn btn-secondary" 
+            <a href="<?php echo get_app_base_url(); ?>/admin/monitoring.php?action=clear_logs" class="btn btn-secondary" 
                onclick="return confirm('Are you sure you want to clear old logs?')">
                 Clear Old Logs
             </a>
@@ -242,7 +242,7 @@ include __DIR__ . '/../templates/admin-header.php';
                         <td><?php echo number_format($file['size'] / 1024, 2); ?> KB</td>
                         <td><?php echo date('Y-m-d H:i:s', $file['modified']); ?></td>
                         <td>
-                            <a href="/karyalayportal/admin/monitoring.php?action=download&file=<?php echo urlencode($file['name']); ?>" 
+                            <a href="<?php echo get_app_base_url(); ?>/admin/monitoring.php?action=download&file=<?php echo urlencode($file['name']); ?>" 
                                class="btn btn-sm">Download</a>
                         </td>
                     </tr>

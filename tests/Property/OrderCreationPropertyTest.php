@@ -96,11 +96,12 @@ class OrderCreationPropertyTest extends TestCase
                 'Order should be linked to plan'
             );
             
-            // Assert: Order amount matches plan price
+            // Assert: Order amount matches plan effective price
+            $effectivePrice = !empty($testPlan['discounted_price']) ? $testPlan['discounted_price'] : $testPlan['mrp'];
             $this->assertEquals(
-                $testPlan['price'],
+                $effectivePrice,
                 $order['amount'],
-                'Order amount should match plan price'
+                'Order amount should match plan effective price (discounted_price if available, otherwise mrp)'
             );
             
             // Assert: Order currency matches plan currency
@@ -328,7 +329,8 @@ class OrderCreationPropertyTest extends TestCase
             'name' => 'Test Plan',
             'slug' => $slug,
             'description' => 'Test plan for property testing',
-            'price' => $price,
+            'mrp' => $price,
+            'discounted_price' => null,
             'currency' => 'USD',
             'billing_period_months' => 1,
             'features' => json_encode(['Feature 1', 'Feature 2']),

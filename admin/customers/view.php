@@ -14,18 +14,20 @@ use Karyalay\Models\User;
 use Karyalay\Models\Subscription;
 use Karyalay\Models\Order;
 use Karyalay\Models\Ticket;
+use Karyalay\Services\InvoiceService;
 
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and customers.view_details permission
 require_admin();
+require_permission('customers.view_details');
 
 // Get customer ID from query parameter
 $customer_id = $_GET['id'] ?? '';
 
 if (empty($customer_id)) {
-    header('Location: ' . get_base_url() . '/admin/customers.php');
+    header('Location: ' . get_app_base_url() . '/admin/customers.php');
     exit;
 }
 
@@ -43,12 +45,12 @@ try {
     $customer = $userModel->findById($customer_id);
     
     if (!$customer || $customer['role'] !== 'CUSTOMER') {
-        header('Location: ' . get_base_url() . '/admin/customers.php');
+        header('Location: ' . get_app_base_url() . '/admin/customers.php');
         exit;
     }
 } catch (Exception $e) {
     error_log("Customer fetch error: " . $e->getMessage());
-    header('Location: ' . get_base_url() . '/admin/customers.php');
+    header('Location: ' . get_app_base_url() . '/admin/customers.php');
     exit;
 }
 
@@ -56,10 +58,12 @@ try {
 try {
     $subscriptions_sql = "SELECT s.*, 
                           p.name as plan_name, 
-                          p.price as plan_price,
+                          p.mrp as plan_mrp,
+                          p.discounted_price as plan_discounted_price,
                           p.currency as plan_currency,
                           p.billing_period_months as plan_billing_period,
                           port.instance_url as port_url,
+                          port.status as port_status,
                           port.db_host as port_db_host,
                           port.db_name as port_db_name
                           FROM subscriptions s
@@ -126,7 +130,7 @@ include_admin_header('Customer Details');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <div class="breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/customers.php" class="breadcrumb-link">Customers</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/customers.php" class="breadcrumb-link">Customers</a>
             <span class="breadcrumb-separator">/</span>
             <span class="breadcrumb-current"><?php echo htmlspecialchars($customer['name']); ?></span>
         </div>
@@ -137,57 +141,59 @@ include_admin_header('Customer Details');
 
 <!-- Customer Profile Card -->
 <div class="admin-card">
-    <div class="admin-card-header">
-        <h3 class="admin-card-title">Customer Profile</h3>
+    <div class="card-header">
+        <h2 class="card-title">Customer Profile</h2>
     </div>
-    <div class="customer-profile-grid">
-        <div class="profile-field">
-            <label class="profile-label">Full Name</label>
-            <p class="profile-value"><?php echo htmlspecialchars($customer['name']); ?></p>
-        </div>
-        <div class="profile-field">
-            <label class="profile-label">Email Address</label>
-            <p class="profile-value">
-                <a href="mailto:<?php echo htmlspecialchars($customer['email']); ?>" class="profile-link">
-                    <?php echo htmlspecialchars($customer['email']); ?>
-                </a>
-            </p>
-        </div>
-        <div class="profile-field">
-            <label class="profile-label">Phone Number</label>
-            <p class="profile-value">
-                <?php if (!empty($customer['phone'])): ?>
-                    <a href="tel:<?php echo htmlspecialchars($customer['phone']); ?>" class="profile-link">
-                        <?php echo htmlspecialchars($customer['phone']); ?>
+    <div class="card-body">
+        <div class="customer-profile-grid">
+            <div class="profile-field">
+                <label class="profile-label">Full Name</label>
+                <p class="profile-value"><?php echo htmlspecialchars($customer['name']); ?></p>
+            </div>
+            <div class="profile-field">
+                <label class="profile-label">Email Address</label>
+                <p class="profile-value">
+                    <a href="mailto:<?php echo htmlspecialchars($customer['email']); ?>" class="profile-link">
+                        <?php echo htmlspecialchars($customer['email']); ?>
                     </a>
-                <?php else: ?>
-                    <span class="text-muted">Not provided</span>
-                <?php endif; ?>
-            </p>
-        </div>
-        <div class="profile-field">
-            <label class="profile-label">Business Name</label>
-            <p class="profile-value">
-                <?php if (!empty($customer['business_name'])): ?>
-                    <?php echo htmlspecialchars($customer['business_name']); ?>
-                <?php else: ?>
-                    <span class="text-muted">Not provided</span>
-                <?php endif; ?>
-            </p>
-        </div>
-        <div class="profile-field">
-            <label class="profile-label">Email Verified</label>
-            <p class="profile-value">
-                <?php if ($customer['email_verified']): ?>
-                    <span class="badge badge-success">Verified</span>
-                <?php else: ?>
-                    <span class="badge badge-warning">Not Verified</span>
-                <?php endif; ?>
-            </p>
-        </div>
-        <div class="profile-field">
-            <label class="profile-label">Registration Date</label>
-            <p class="profile-value"><?php echo date('F j, Y g:i A', strtotime($customer['created_at'])); ?></p>
+                </p>
+            </div>
+            <div class="profile-field">
+                <label class="profile-label">Phone Number</label>
+                <p class="profile-value">
+                    <?php if (!empty($customer['phone'])): ?>
+                        <a href="tel:<?php echo htmlspecialchars($customer['phone']); ?>" class="profile-link">
+                            <?php echo htmlspecialchars($customer['phone']); ?>
+                        </a>
+                    <?php else: ?>
+                        <span class="text-muted">Not provided</span>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div class="profile-field">
+                <label class="profile-label">Business Name</label>
+                <p class="profile-value">
+                    <?php if (!empty($customer['business_name'])): ?>
+                        <?php echo htmlspecialchars($customer['business_name']); ?>
+                    <?php else: ?>
+                        <span class="text-muted">Not provided</span>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div class="profile-field">
+                <label class="profile-label">Email Verified</label>
+                <p class="profile-value">
+                    <?php if ($customer['email_verified']): ?>
+                        <span class="badge badge-success">Verified</span>
+                    <?php else: ?>
+                        <span class="badge badge-warning">Not Verified</span>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div class="profile-field">
+                <label class="profile-label">Registration Date</label>
+                <p class="profile-value"><?php echo date('F j, Y g:i A', strtotime($customer['created_at'])); ?></p>
+            </div>
         </div>
     </div>
 </div>
@@ -199,7 +205,7 @@ include_admin_header('Customer Details');
         'Active Subscriptions',
         format_number($active_subscriptions),
         'Currently active subscriptions',
-        '📅'
+        ''
     );
     
     render_admin_card(
@@ -213,27 +219,35 @@ include_admin_header('Customer Details');
         'Total Revenue',
         format_currency($total_revenue),
         'Revenue from successful orders',
-        '💰'
+        ''
     );
     
     render_admin_card(
         'Open Tickets',
         format_number($open_tickets),
         'Tickets requiring attention',
-        '🎫'
+        ''
     );
     ?>
 </div>
 
 <!-- Subscriptions Section -->
 <div class="admin-card">
-    <div class="admin-card-header">
-        <h3 class="admin-card-title">Subscriptions (<?php echo count($subscriptions); ?>)</h3>
+    <div class="card-header">
+        <h2 class="card-title">Subscriptions (<?php echo count($subscriptions); ?>)</h2>
+        <?php if (!empty($subscriptions)): ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions.php?customer=<?php echo urlencode($customer_id); ?>" 
+           class="btn btn-sm btn-secondary">
+            View All in Subscriptions
+        </a>
+        <?php endif; ?>
     </div>
     
     <?php if (empty($subscriptions)): ?>
-        <div class="empty-state-small">
-            <p class="empty-state-text">No subscriptions found</p>
+        <div class="card-body">
+            <div class="empty-state-small">
+                <p class="empty-state-text">No subscriptions found</p>
+            </div>
         </div>
     <?php else: ?>
         <div class="admin-table-container">
@@ -255,9 +269,15 @@ include_admin_header('Customer Details');
                                 <div class="table-cell-primary">
                                     <?php echo htmlspecialchars($subscription['plan_name'] ?? 'Unknown Plan'); ?>
                                 </div>
-                                <?php if ($subscription['plan_price']): ?>
+                                <?php 
+                                // Calculate effective price (discounted_price if available, otherwise mrp)
+                                $effective_price = !empty($subscription['plan_discounted_price']) && $subscription['plan_discounted_price'] > 0 
+                                    ? $subscription['plan_discounted_price'] 
+                                    : $subscription['plan_mrp'];
+                                ?>
+                                <?php if ($effective_price): ?>
                                     <div class="table-cell-secondary">
-                                        <?php echo format_currency($subscription['plan_price'], $subscription['plan_currency'] ?? 'USD'); ?>
+                                        <?php echo format_currency($effective_price, $subscription['plan_currency'] ?? 'USD'); ?>
                                         / <?php echo $subscription['plan_billing_period']; ?> month<?php echo $subscription['plan_billing_period'] > 1 ? 's' : ''; ?>
                                     </div>
                                 <?php endif; ?>
@@ -278,23 +298,30 @@ include_admin_header('Customer Details');
                             <td>
                                 <?php if ($subscription['port_url']): ?>
                                     <div class="table-cell-primary">
-                                        <?php echo htmlspecialchars($subscription['port_url']); ?>
+                                        <a href="<?php echo get_app_base_url(); ?>/admin/ports/view.php?id=<?php echo urlencode($subscription['assigned_port_id']); ?>" class="profile-link">
+                                            <?php echo htmlspecialchars($subscription['port_url']); ?>
+                                        </a>
                                     </div>
-                                    <?php if ($subscription['port_db_name']): ?>
-                                        <div class="table-cell-secondary">
-                                            DB: <?php echo htmlspecialchars($subscription['port_db_name']); ?>
-                                        </div>
-                                    <?php endif; ?>
+                                    <div class="table-cell-secondary">
+                                        Status: <?php echo get_status_badge($subscription['port_status']); ?>
+                                        <?php if ($subscription['port_db_name']): ?>
+                                            | DB: <?php echo htmlspecialchars($subscription['port_db_name']); ?>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <span class="text-muted">Not assigned</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a href="<?php echo get_base_url(); ?>/admin/subscriptions.php?id=<?php echo urlencode($subscription['id']); ?>" 
+                                <?php if (has_permission('subscriptions.view_details')): ?>
+                                <a href="<?php echo get_app_base_url(); ?>/admin/subscriptions/view.php?id=<?php echo urlencode($subscription['id']); ?>" 
                                    class="btn btn-sm btn-secondary"
                                    title="View subscription">
                                     View
                                 </a>
+                                <?php else: ?>
+                                <span class="text-muted">—</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -306,13 +333,21 @@ include_admin_header('Customer Details');
 
 <!-- Orders Section -->
 <div class="admin-card">
-    <div class="admin-card-header">
-        <h3 class="admin-card-title">Orders (<?php echo count($orders); ?>)</h3>
+    <div class="card-header">
+        <h2 class="card-title">Orders (<?php echo count($orders); ?>)</h2>
+        <?php if (!empty($orders)): ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/orders.php?customer=<?php echo urlencode($customer_id); ?>" 
+           class="btn btn-sm btn-secondary">
+            View All in Orders
+        </a>
+        <?php endif; ?>
     </div>
     
     <?php if (empty($orders)): ?>
-        <div class="empty-state-small">
-            <p class="empty-state-text">No orders found</p>
+        <div class="card-body">
+            <div class="empty-state-small">
+                <p class="empty-state-text">No orders found</p>
+            </div>
         </div>
     <?php else: ?>
         <div class="admin-table-container">
@@ -346,10 +381,73 @@ include_admin_header('Customer Details');
                             </td>
                             <td><?php echo get_relative_time($order['created_at']); ?></td>
                             <td>
-                                <a href="<?php echo get_base_url(); ?>/admin/orders.php?id=<?php echo urlencode($order['id']); ?>" 
+                                <?php if (has_permission('orders.view_details')): ?>
+                                <a href="<?php echo get_app_base_url(); ?>/admin/orders/view.php?id=<?php echo urlencode($order['id']); ?>" 
                                    class="btn btn-sm btn-secondary"
                                    title="View order">
                                     View
+                                </a>
+                                <?php else: ?>
+                                <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- Invoices Section (successful orders only) -->
+<?php 
+$successful_orders = array_filter($orders, function($o) {
+    return $o['status'] === 'SUCCESS';
+});
+?>
+<div class="admin-card">
+    <div class="card-header">
+        <h2 class="card-title">Invoices (<?php echo count($successful_orders); ?>)</h2>
+    </div>
+    
+    <?php if (empty($successful_orders)): ?>
+        <div class="card-body">
+            <div class="empty-state-small">
+                <p class="empty-state-text">No invoices found (invoices are generated for successful orders)</p>
+            </div>
+        </div>
+    <?php else: ?>
+        <?php
+        $invoiceService = new InvoiceService();
+        ?>
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($successful_orders as $order): ?>
+                        <?php 
+                        $invoice_number = $order['invoice_id'] ?? $invoiceService->generateInvoiceNumber($order);
+                        ?>
+                        <tr>
+                            <td>
+                                <code class="code-inline"><?php echo htmlspecialchars($invoice_number); ?></code>
+                            </td>
+                            <td><?php echo htmlspecialchars($order['plan_name'] ?? 'Unknown Plan'); ?></td>
+                            <td><?php echo format_currency($order['amount'], $order['currency'] ?? 'USD'); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($order['created_at'])); ?></td>
+                            <td>
+                                <a href="<?php echo get_app_base_url(); ?>/admin/invoices/view.php?order_id=<?php echo urlencode($order['id']); ?>" 
+                                   class="btn btn-sm btn-primary"
+                                   title="View invoice">
+                                    View Invoice
                                 </a>
                             </td>
                         </tr>
@@ -362,13 +460,21 @@ include_admin_header('Customer Details');
 
 <!-- Tickets Section -->
 <div class="admin-card">
-    <div class="admin-card-header">
-        <h3 class="admin-card-title">Support Tickets (<?php echo count($tickets); ?>)</h3>
+    <div class="card-header">
+        <h2 class="card-title">Support Tickets (<?php echo count($tickets); ?>)</h2>
+        <?php if (!empty($tickets)): ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets.php?customer=<?php echo urlencode($customer_id); ?>" 
+           class="btn btn-sm btn-secondary">
+            View All in Tickets
+        </a>
+        <?php endif; ?>
     </div>
     
     <?php if (empty($tickets)): ?>
-        <div class="empty-state-small">
-            <p class="empty-state-text">No support tickets found</p>
+        <div class="card-body">
+            <div class="empty-state-small">
+                <p class="empty-state-text">No support tickets found</p>
+            </div>
         </div>
     <?php else: ?>
         <div class="admin-table-container">
@@ -424,11 +530,15 @@ include_admin_header('Customer Details');
                             </td>
                             <td><?php echo get_relative_time($ticket['created_at']); ?></td>
                             <td>
-                                <a href="<?php echo get_base_url(); ?>/admin/support/tickets/view.php?id=<?php echo urlencode($ticket['id']); ?>" 
+                                <?php if (has_permission('tickets.view_details')): ?>
+                                <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets/view.php?id=<?php echo urlencode($ticket['id']); ?>" 
                                    class="btn btn-sm btn-primary"
                                    title="View ticket">
                                     View
                                 </a>
+                                <?php else: ?>
+                                <span class="text-muted">—</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -441,6 +551,14 @@ include_admin_header('Customer Details');
 <style>
 .admin-page-header {
     margin-bottom: var(--spacing-6);
+}
+
+.admin-card {
+    margin-bottom: var(--spacing-6);
+}
+
+.admin-card:last-child {
+    margin-bottom: 0;
 }
 
 .breadcrumb {
@@ -481,11 +599,29 @@ include_admin_header('Customer Details');
     margin: 0;
 }
 
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4) var(--spacing-5);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.card-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-900);
+    margin: 0;
+}
+
+.card-body {
+    padding: var(--spacing-5);
+}
+
 .customer-profile-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: var(--spacing-6);
-    padding: var(--spacing-4);
 }
 
 .profile-field {

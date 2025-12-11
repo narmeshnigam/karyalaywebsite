@@ -23,7 +23,7 @@ class Order
     /**
      * Create a new order
      * 
-     * @param array $data Order data (customer_id, plan_id, amount, currency, status, payment_gateway_id, payment_method)
+     * @param array $data Order data (customer_id, plan_id, amount, currency, status, pg_order_id, pg_payment_id, payment_method, billing_*)
      * @return array|false Returns order data with id on success, false on failure
      */
     public function create(array $data)
@@ -32,9 +32,15 @@ class Order
             $id = $this->generateUuid();
 
             $sql = "INSERT INTO orders (
-                id, customer_id, plan_id, amount, currency, status, payment_gateway_id, payment_method
+                id, customer_id, plan_id, amount, currency, status, pg_order_id, pg_payment_id, payment_method,
+                billing_full_name, billing_business_name, billing_business_tax_id,
+                billing_address_line1, billing_address_line2, billing_city, billing_state,
+                billing_postal_code, billing_country, billing_phone
             ) VALUES (
-                :id, :customer_id, :plan_id, :amount, :currency, :status, :payment_gateway_id, :payment_method
+                :id, :customer_id, :plan_id, :amount, :currency, :status, :pg_order_id, :pg_payment_id, :payment_method,
+                :billing_full_name, :billing_business_name, :billing_business_tax_id,
+                :billing_address_line1, :billing_address_line2, :billing_city, :billing_state,
+                :billing_postal_code, :billing_country, :billing_phone
             )";
 
             $stmt = $this->db->prepare($sql);
@@ -45,8 +51,19 @@ class Order
                 ':amount' => $data['amount'],
                 ':currency' => $data['currency'] ?? 'USD',
                 ':status' => $data['status'] ?? 'PENDING',
-                ':payment_gateway_id' => $data['payment_gateway_id'] ?? null,
-                ':payment_method' => $data['payment_method'] ?? null
+                ':pg_order_id' => $data['pg_order_id'] ?? null,
+                ':pg_payment_id' => $data['pg_payment_id'] ?? null,
+                ':payment_method' => $data['payment_method'] ?? null,
+                ':billing_full_name' => $data['billing_full_name'] ?? null,
+                ':billing_business_name' => $data['billing_business_name'] ?? null,
+                ':billing_business_tax_id' => $data['billing_business_tax_id'] ?? null,
+                ':billing_address_line1' => $data['billing_address_line1'] ?? null,
+                ':billing_address_line2' => $data['billing_address_line2'] ?? null,
+                ':billing_city' => $data['billing_city'] ?? null,
+                ':billing_state' => $data['billing_state'] ?? null,
+                ':billing_postal_code' => $data['billing_postal_code'] ?? null,
+                ':billing_country' => $data['billing_country'] ?? null,
+                ':billing_phone' => $data['billing_phone'] ?? null
             ]);
 
             return $this->findById($id);
@@ -103,24 +120,54 @@ class Order
     }
 
     /**
-     * Find order by payment gateway ID
+     * Find order by payment gateway order ID
      * 
-     * @param string $paymentGatewayId Payment gateway ID
+     * @param string $pgOrderId Payment gateway order ID
      * @return array|false Returns order data or false if not found
      */
-    public function findByPaymentGatewayId(string $paymentGatewayId)
+    public function findByPgOrderId(string $pgOrderId)
     {
         try {
-            $sql = "SELECT * FROM orders WHERE payment_gateway_id = :payment_gateway_id";
+            $sql = "SELECT * FROM orders WHERE pg_order_id = :pg_order_id";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([':payment_gateway_id' => $paymentGatewayId]);
+            $stmt->execute([':pg_order_id' => $pgOrderId]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result ?: false;
         } catch (PDOException $e) {
-            error_log('Order find by payment gateway ID failed: ' . $e->getMessage());
+            error_log('Order find by PG order ID failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Find order by payment gateway payment ID
+     * 
+     * @param string $pgPaymentId Payment gateway payment ID
+     * @return array|false Returns order data or false if not found
+     */
+    public function findByPgPaymentId(string $pgPaymentId)
+    {
+        try {
+            $sql = "SELECT * FROM orders WHERE pg_payment_id = :pg_payment_id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':pg_payment_id' => $pgPaymentId]);
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ?: false;
+        } catch (PDOException $e) {
+            error_log('Order find by PG payment ID failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use findByPgOrderId() instead
+     */
+    public function findByPaymentGatewayId(string $paymentGatewayId)
+    {
+        return $this->findByPgOrderId($paymentGatewayId);
     }
 
     /**
@@ -133,7 +180,7 @@ class Order
     public function update(string $id, array $data): bool
     {
         try {
-            $allowedFields = ['status', 'payment_gateway_id', 'payment_method', 'amount', 'currency'];
+            $allowedFields = ['status', 'pg_order_id', 'pg_payment_id', 'payment_method', 'amount', 'currency', 'invoice_id'];
             $updateFields = [];
             $params = [':id' => $id];
 
@@ -156,6 +203,18 @@ class Order
             error_log('Order update failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Update invoice ID for an order
+     * 
+     * @param string $id Order ID
+     * @param string $invoiceId Invoice ID
+     * @return bool Returns true on success, false on failure
+     */
+    public function updateInvoiceId(string $id, string $invoiceId): bool
+    {
+        return $this->update($id, ['invoice_id' => $invoiceId]);
     }
 
     /**

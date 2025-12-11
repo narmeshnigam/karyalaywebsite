@@ -13,6 +13,7 @@ use Karyalay\Services\InputSanitizationService;
 
 startSecureSession();
 require_admin();
+require_permission('hero_slides.manage');
 
 $heroSlideModel = new HeroSlide();
 $sanitizationService = new InputSanitizationService();
@@ -51,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $heroSlideModel->create($form_data);
             if ($result) {
                 $_SESSION['admin_success'] = 'Hero slide created successfully!';
-                header('Location: ' . get_base_url() . '/admin/hero-slides.php');
+                header('Location: ' . get_app_base_url() . '/admin/hero-slides.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create hero slide.';
@@ -67,7 +68,7 @@ include_admin_header('Create Hero Slide');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php">Hero Slides</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php">Hero Slides</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Slide</span>
         </nav>
@@ -75,7 +76,7 @@ include_admin_header('Create Hero Slide');
         <p class="admin-page-description">Add a new slide to the home page hero slider</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">← Back to Slides</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">← Back to Slides</a>
     </div>
 </div>
 
@@ -91,7 +92,7 @@ include_admin_header('Create Hero Slide');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/hero-slides/new.php" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/hero-slides/new.php" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -169,7 +170,7 @@ include_admin_header('Create Hero Slide');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Slide</button>
-            <a href="<?php echo get_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/hero-slides.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

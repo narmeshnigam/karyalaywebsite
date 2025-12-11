@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive, responsive design system for the Karyalay Portal System built with vanilla CSS and JavaScript.
+A comprehensive, responsive design system for the SellerPortal System built with vanilla CSS and JavaScript.
 
 ## What Was Implemented
 

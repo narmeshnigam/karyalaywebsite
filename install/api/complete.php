@@ -101,7 +101,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Installation completed successfully!',
-        'redirect' => '/admin/dashboard.php'
+        'redirect' => $basePath . '/admin/dashboard.php'
     ]);
     
 } catch (Exception $e) {

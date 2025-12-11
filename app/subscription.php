@@ -15,6 +15,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // Include required files
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/template_helpers.php';
 
 use Karyalay\Models\Subscription;
 use Karyalay\Models\Plan;
@@ -56,8 +57,11 @@ if ($activeSubscription) {
     if ($plan) {
         $planName = htmlspecialchars($plan['name']);
         $planDescription = htmlspecialchars($plan['description'] ?? '');
-        $planPrice = number_format($plan['price'], 2);
-        $planCurrency = htmlspecialchars($plan['currency']);
+        $effectivePrice = !empty($plan['discounted_price']) && $plan['discounted_price'] > 0 
+            ? $plan['discounted_price'] 
+            : $plan['mrp'];
+        $planPrice = format_price($effectivePrice);
+        $planCurrency = get_currency_symbol();
         $billingPeriod = $plan['billing_period_months'] . ' month' . ($plan['billing_period_months'] > 1 ? 's' : '');
         $planFeatures = $plan['features'] ?? [];
     }
@@ -106,7 +110,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
                 You don't have an active subscription yet.
             </p>
             <div style="text-align: center;">
-                <a href="/pricing.php" class="btn btn-primary">View Plans</a>
+                <a href="<?php echo get_app_base_url(); ?>/app/plans.php" class="btn btn-primary">Get Started</a>
             </div>
         </div>
     </div>
@@ -197,10 +201,10 @@ require_once __DIR__ . '/../templates/customer-header.php';
     </div>
 
     <div class="quick-actions">
-        <a href="/app/subscription/renew.php" class="btn btn-primary">Renew Subscription</a>
-        <a href="/app/plans.php" class="btn btn-outline">View Other Plans</a>
+        <a href="<?php echo get_app_base_url(); ?>/app/subscription/renew.php?subscription_id=<?php echo urlencode($activeSubscription['id']); ?>" class="btn btn-primary">Renew Subscription</a>
+        <a href="<?php echo get_app_base_url(); ?>/app/plans.php" class="btn btn-outline">View Other Plans</a>
         <?php if ($portUrl !== 'Not Assigned'): ?>
-            <a href="/app/setup.php" class="btn btn-outline">Setup Instructions</a>
+            <a href="<?php echo get_app_base_url(); ?>/app/setup.php" class="btn btn-outline">Setup Instructions</a>
         <?php endif; ?>
     </div>
 <?php endif; ?>

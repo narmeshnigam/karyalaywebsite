@@ -328,6 +328,7 @@ class InstallationService
                 'name' => $userData['name'],
                 'email' => $userData['email'],
                 'password' => $userData['password'], // Will be hashed in User model
+                'phone' => null, // Admin users don't require phone numbers
                 'role' => 'ADMIN',
                 'email_verified' => true
             ]);
@@ -390,7 +391,7 @@ class InstallationService
 
             // Content
             $mail->isHTML(true);
-            $mail->Subject = 'SMTP Test Email - Karyalay Portal Installation';
+            $mail->Subject = 'SMTP Test Email - Portal Installation';
             $mail->Body = '<p>If you receive this email, your SMTP configuration is working correctly.</p>';
             $mail->AltBody = 'If you receive this email, your SMTP configuration is working correctly.';
 

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Terms of Service Page
  */
 
@@ -87,16 +87,16 @@ include_header($page_title, $page_description);
                 <div class="legal-sidebar-card">
                     <h3 class="legal-sidebar-title">Legal Pages</h3>
                     <ul class="legal-sidebar-links">
-                        <li><a href="/karyalayportal/terms.php" class="legal-sidebar-link active">Terms of Service</a></li>
-                        <li><a href="/karyalayportal/privacy.php" class="legal-sidebar-link">Privacy Policy</a></li>
-                        <li><a href="/karyalayportal/refund.php" class="legal-sidebar-link">Refund Policy</a></li>
+                        <li><a href="<?php echo get_base_url(); ?>/terms.php" class="legal-sidebar-link active">Terms of Service</a></li>
+                        <li><a href="<?php echo get_base_url(); ?>/privacy.php" class="legal-sidebar-link">Privacy Policy</a></li>
+                        <li><a href="<?php echo get_base_url(); ?>/refund.php" class="legal-sidebar-link">Refund Policy</a></li>
                     </ul>
                 </div>
                 
                 <div class="legal-sidebar-card">
                     <h3 class="legal-sidebar-title">Need Help?</h3>
                     <p class="legal-sidebar-text">If you have questions about our terms, please contact us.</p>
-                    <a href="/karyalayportal/contact.php" class="btn btn-outline btn-sm btn-block">Contact Us</a>
+                    <a href="<?php echo get_base_url(); ?>/contact.php" class="btn btn-outline btn-sm btn-block">Contact Us</a>
                 </div>
             </aside>
         </div>

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // Include required files
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/template_helpers.php';
 
 use Karyalay\Models\Subscription;
 use Karyalay\Models\Plan;
@@ -90,7 +91,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
                 You don't have an active subscription yet.
             </p>
             <div style="text-align: center;">
-                <a href="/pricing.php" class="btn btn-primary">View Plans</a>
+                <a href="<?php echo get_base_url(); ?>/pricing.php" class="btn btn-primary">View Plans</a>
             </div>
         </div>
     </div>
@@ -102,7 +103,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
                 You will receive an email notification once your instance is ready.
             </p>
             <div style="text-align: center; margin-top: 1rem;">
-                <a href="/app/dashboard.php" class="btn btn-outline">Back to Dashboard</a>
+                <a href="<?php echo get_app_base_url(); ?>/app/dashboard.php" class="btn btn-outline">Back to Dashboard</a>
             </div>
         </div>
     </div>
@@ -122,7 +123,7 @@ require_once __DIR__ . '/../templates/customer-header.php';
                         <?php echo $fullPortAddress; ?>
                     </code>
                     <button onclick="copyToClipboard('<?php echo $fullPortAddress; ?>')" class="btn-copy" title="Copy to clipboard">
-                        📋
+                        Copy
                     </button>
                 </span>
             </div>
@@ -210,13 +211,13 @@ require_once __DIR__ . '/../templates/customer-header.php';
                 If you encounter any issues during setup or have questions, we're here to help:
             </p>
             <div class="quick-actions">
-                <a href="/app/support/tickets.php" class="btn btn-primary">
+                <a href="<?php echo get_app_base_url(); ?>/app/support/tickets.php" class="btn btn-primary">
                     Create Support Ticket
                 </a>
-                <a href="/support.php" class="btn btn-outline">
+                <a href="<?php echo get_base_url(); ?>/support.php" class="btn btn-outline">
                     View FAQ
                 </a>
-                <a href="/app/subscription.php" class="btn btn-outline">
+                <a href="<?php echo get_app_base_url(); ?>/app/subscription.php" class="btn btn-outline">
                     View Subscription
                 </a>
             </div>

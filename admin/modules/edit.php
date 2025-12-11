@@ -16,8 +16,9 @@ use Karyalay\Middleware\CsrfMiddleware;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and solutions.manage permission
 require_admin();
+require_permission('solutions.manage');
 
 // Initialize services
 $contentService = new ContentService();
@@ -30,7 +31,7 @@ $module_id = $_GET['id'] ?? '';
 if (empty($module_id)) {
     $_SESSION['flash_message'] = 'Module ID is required.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/modules.php');
+    header('Location: ' . get_app_base_url() . '/admin/modules.php');
     exit;
 }
 
@@ -40,7 +41,7 @@ $module = $contentService->read('module', $module_id);
 if (!$module) {
     $_SESSION['flash_message'] = 'Module not found.';
     $_SESSION['flash_type'] = 'danger';
-    header('Location: ' . get_base_url() . '/admin/modules.php');
+    header('Location: ' . get_app_base_url() . '/admin/modules.php');
     exit;
 }
 
@@ -123,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $_SESSION['flash_message'] = 'Module updated successfully!';
                 $_SESSION['flash_type'] = 'success';
-                header('Location: ' . get_base_url() . '/admin/modules.php');
+                header('Location: ' . get_app_base_url() . '/admin/modules.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update module. Please check if the slug is unique.';
@@ -145,7 +146,7 @@ include_admin_header('Edit Module');
         <p class="admin-page-description">Update module information</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/modules.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/modules.php" class="btn btn-secondary">
             ← Back to Modules
         </a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">
@@ -165,7 +166,7 @@ include_admin_header('Edit Module');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/modules/edit.php?id=<?php echo urlencode($module_id); ?>" class="admin-form">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/modules/edit.php?id=<?php echo urlencode($module_id); ?>" class="admin-form">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     
     <div class="admin-card">
@@ -295,12 +296,12 @@ include_admin_header('Edit Module');
     
     <div class="admin-form-actions">
         <button type="submit" class="btn btn-primary">Update Module</button>
-        <a href="<?php echo get_base_url(); ?>/admin/modules.php" class="btn btn-secondary">Cancel</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/modules.php" class="btn btn-secondary">Cancel</a>
     </div>
 </form>
 
 <!-- Delete Confirmation Form (hidden) -->
-<form id="deleteForm" method="POST" action="<?php echo get_base_url(); ?>/admin/modules/delete.php" style="display: none;">
+<form id="deleteForm" method="POST" action="<?php echo get_app_base_url(); ?>/admin/modules/delete.php" style="display: none;">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="id" value="<?php echo htmlspecialchars($module_id); ?>">
 </form>

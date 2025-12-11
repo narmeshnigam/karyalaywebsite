@@ -24,11 +24,11 @@ include_header($page_title, $page_description);
         <div class="container">
             <h1 class="hero-title">Welcome to Karyalay</h1>
             <p class="hero-subtitle">
-                Comprehensive business management system designed to streamline your operations
+                <?php echo htmlspecialchars(get_footer_company_description()); ?>
             </p>
             <div class="hero-actions">
-                <a href="/karyalayportal/register.php" class="btn btn-primary btn-lg">Get Started</a>
-                <a href="/karyalayportal/demo.php" class="btn btn-outline btn-lg">Request Demo</a>
+                <a href="<?php echo get_base_url(); ?>/register.php" class="btn btn-primary btn-lg">Get Started</a>
+                <a href="<?php echo get_base_url(); ?>/demo.php" class="btn btn-outline btn-lg">Request Demo</a>
             </div>
         </div>
     </section>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Karyalay Portal System uses MySQL/MariaDB as its database. This guide covers database configuration, migrations, and seeding.
+The SellerPortal System uses MySQL/MariaDB as its database. This guide covers database configuration, migrations, and seeding.
 
 ## Prerequisites
 

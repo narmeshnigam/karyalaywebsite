@@ -350,7 +350,8 @@ class FailedRenewalImmutabilityPropertyTest extends TestCase
             'name' => 'Test Plan',
             'slug' => $slug,
             'description' => 'Test plan for property testing',
-            'price' => $price,
+            'mrp' => $price,
+            'discounted_price' => null,
             'currency' => 'USD',
             'billing_period_months' => $billingPeriodMonths,
             'features' => json_encode(['Feature 1', 'Feature 2']),
@@ -375,7 +376,7 @@ class FailedRenewalImmutabilityPropertyTest extends TestCase
         $orderData = [
             'customer_id' => $customerId,
             'plan_id' => $planId,
-            'amount' => $plan['price'],
+            'amount' => !empty($plan['discounted_price']) ? $plan['discounted_price'] : $plan['mrp'],
             'currency' => $plan['currency'],
             'status' => 'SUCCESS'
         ];

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Home Page
  */
 
@@ -62,7 +62,7 @@ $featuredBlogPosts = $blogPostModel->getFeatured(3);
 
 // Set page variables
 $page_title = 'Home';
-$page_description = 'Karyalay - Comprehensive business management system designed to streamline your operations';
+$page_description = get_brand_name() . ' - ' . get_footer_company_description();
 
 // Include header
 include_header($page_title, $page_description);
@@ -94,7 +94,7 @@ include_header($page_title, $page_description);
                 <div class="hero-slide-content">
                     <div class="container">
                         <h1 class="hero-title">Transform Your Business Operations</h1>
-                        <p class="hero-subtitle">Comprehensive business management system designed to streamline your operations and boost productivity</p>
+                        <p class="hero-subtitle"><?php echo htmlspecialchars(get_footer_company_description()); ?></p>
                     </div>
                 </div>
             </div>
@@ -104,8 +104,8 @@ include_header($page_title, $page_description);
         <div class="hero-actions-fixed">
             <div class="container">
                 <div class="hero-actions">
-                    <a href="/karyalayportal/register.php" class="btn btn-primary btn-lg">Get Started</a>
-                    <a href="/karyalayportal/demo.php" class="btn btn-outline btn-lg">Request Demo</a>
+                    <a href="<?php echo get_base_url(); ?>/register.php" class="btn btn-primary btn-lg">Get Started</a>
+                    <a href="<?php echo get_base_url(); ?>/demo.php" class="btn btn-outline btn-lg">Request Demo</a>
                 </div>
             </div>
         </div>
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <?php echo strlen($solution['description']) > 120 ? '...' : ''; ?>
                             </p>
                         <?php endif; ?>
-                        <a href="/karyalayportal/solution/<?php echo urlencode($solution['slug']); ?>" class="btn btn-outline btn-sm">Learn More</a>
+                        <a href="<?php echo get_base_url(); ?>/solution/<?php echo urlencode($solution['slug']); ?>" class="btn btn-outline btn-sm">Learn More</a>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="solution-card-description">
                         Manage customer relationships, track interactions, and provide excellent service.
                     </p>
-                    <a href="/karyalayportal/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
+                    <a href="<?php echo get_base_url(); ?>/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
                 </div>
                 
                 <div class="solution-card">
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="solution-card-description">
                         Handle subscriptions, billing, and renewals automatically with ease.
                     </p>
-                    <a href="/karyalayportal/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
+                    <a href="<?php echo get_base_url(); ?>/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
                 </div>
                 
                 <div class="solution-card">
@@ -318,13 +318,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="solution-card-description">
                         Provide exceptional customer support with our integrated ticketing system.
                     </p>
-                    <a href="/karyalayportal/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
+                    <a href="<?php echo get_base_url(); ?>/solutions.php" class="btn btn-outline btn-sm">Learn More</a>
                 </div>
             </div>
         <?php endif; ?>
         
         <div class="text-center mt-8">
-            <a href="/karyalayportal/solutions.php" class="btn btn-primary">View All Solutions</a>
+            <a href="<?php echo get_base_url(); ?>/solutions.php" class="btn btn-primary">View All Solutions</a>
         </div>
     </div>
 </section>
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <?php echo strlen($caseStudy['challenge']) > 150 ? '...' : ''; ?></p>
                             </div>
                         <?php endif; ?>
-                        <a href="/karyalayportal/case-study/<?php echo urlencode($caseStudy['slug']); ?>" 
+                        <a href="<?php echo get_base_url(); ?>/case-study/<?php echo urlencode($caseStudy['slug']); ?>" 
                            class="btn btn-outline btn-sm">Read Full Story →</a>
                     </div>
                 </article>
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         
         <div class="text-center mt-8">
-            <a href="/karyalayportal/case-studies.php" class="btn btn-primary">View All Case Studies</a>
+            <a href="<?php echo get_base_url(); ?>/case-studies.php" class="btn btn-primary">View All Case Studies</a>
         </div>
     </div>
 </section>
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <?php endif; ?>
                         </div>
                         <h3 class="blog-post-card-title">
-                            <a href="/karyalayportal/blog/<?php echo urlencode($post['slug']); ?>">
+                            <a href="<?php echo get_base_url(); ?>/blog/<?php echo urlencode($post['slug']); ?>">
                                 <?php echo htmlspecialchars($post['title']); ?>
                             </a>
                         </h3>
@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <?php echo strlen($post['excerpt']) > 120 ? '...' : ''; ?>
                             </p>
                         <?php endif; ?>
-                        <a href="/karyalayportal/blog/<?php echo urlencode($post['slug']); ?>" 
+                        <a href="<?php echo get_base_url(); ?>/blog/<?php echo urlencode($post['slug']); ?>" 
                            class="blog-post-card-link">Read More →</a>
                     </div>
                 </article>
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         
         <div class="text-center mt-8">
-            <a href="/karyalayportal/blog.php" class="btn btn-primary">View All Posts</a>
+            <a href="<?php echo get_base_url(); ?>/blog.php" class="btn btn-primary">View All Posts</a>
         </div>
     </div>
 </section>

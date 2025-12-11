@@ -6,29 +6,23 @@
  * Allow admin to change status and assign to team members
  */
 
-require_once __DIR__ . '/../../../config/app.php';
+require_once __DIR__ . '/../../../config/bootstrap.php';
 require_once __DIR__ . '/../../../includes/auth_helpers.php';
 require_once __DIR__ . '/../../../includes/admin_helpers.php';
-require_once __DIR__ . '/../../../classes/Database/Connection.php';
-require_once __DIR__ . '/../../../classes/Services/TicketService.php';
-require_once __DIR__ . '/../../../classes/Models/Ticket.php';
-require_once __DIR__ . '/../../../classes/Models/TicketMessage.php';
-require_once __DIR__ . '/../../../classes/Models/User.php';
-require_once __DIR__ . '/../../../classes/Models/Subscription.php';
-require_once __DIR__ . '/../../../classes/Middleware/CsrfMiddleware.php';
 
 use Karyalay\Services\TicketService;
 use Karyalay\Models\Ticket;
 use Karyalay\Models\TicketMessage;
 use Karyalay\Models\User;
 use Karyalay\Models\Subscription;
-use Karyalay\Middleware\CsrfMiddleware;
+use Karyalay\Services\CsrfService;
 
-// Start session
-session_start();
+// Start secure session
+startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and tickets.view_details permission
 require_admin();
+require_permission('tickets.view_details');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -39,13 +33,13 @@ $ticketModel = new Ticket();
 $messageModel = new TicketMessage();
 $userModel = new User();
 $subscriptionModel = new Subscription();
-$csrfMiddleware = new CsrfMiddleware();
+$csrfService = new CsrfService();
 
 // Get ticket ID from query parameter
 $ticket_id = $_GET['id'] ?? '';
 
 if (empty($ticket_id)) {
-    header('Location: /admin/support/tickets.php');
+    header('Location: ' . get_app_base_url() . '/admin/support/tickets.php');
     exit;
 }
 
@@ -55,7 +49,7 @@ $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
-    if (!$csrfMiddleware->validateToken($_POST['csrf_token'] ?? '')) {
+    if (!$csrfService->validateToken($_POST['csrf_token'] ?? '')) {
         $error_message = 'Invalid security token. Please try again.';
     } else {
         $action = $_POST['action'] ?? '';
@@ -67,21 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($content)) {
                 $error_message = 'Reply content cannot be empty.';
             } else {
-                $messageData = [
-                    'ticket_id' => $ticket_id,
-                    'author_id' => $_SESSION['user_id'],
-                    'author_type' => 'ADMIN',
-                    'content' => $content,
-                    'is_internal' => false,
-                    'attachments' => []
-                ];
+                // Use addAdminReply which sends notification email
+                $result = $ticketService->addAdminReply($ticket_id, $_SESSION['user_id'], $content, false);
                 
-                $message = $messageModel->create($messageData);
-                
-                if ($message) {
-                    $success_message = 'Reply added successfully.';
+                if ($result['success']) {
+                    $success_message = 'Reply added successfully. Customer has been notified via email.';
                 } else {
-                    $error_message = 'Failed to add reply. Please try again.';
+                    $error_message = $result['error'] ?? 'Failed to add reply. Please try again.';
                 }
             }
         } elseif ($action === 'add_internal_note') {
@@ -91,21 +77,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($content)) {
                 $error_message = 'Note content cannot be empty.';
             } else {
-                $messageData = [
-                    'ticket_id' => $ticket_id,
-                    'author_id' => $_SESSION['user_id'],
-                    'author_type' => 'ADMIN',
-                    'content' => $content,
-                    'is_internal' => true,
-                    'attachments' => []
-                ];
+                // Use addAdminReply with isInternal=true (no email notification)
+                $result = $ticketService->addAdminReply($ticket_id, $_SESSION['user_id'], $content, true);
                 
-                $message = $messageModel->create($messageData);
-                
-                if ($message) {
+                if ($result['success']) {
                     $success_message = 'Internal note added successfully.';
                 } else {
-                    $error_message = 'Failed to add internal note. Please try again.';
+                    $error_message = $result['error'] ?? 'Failed to add internal note. Please try again.';
                 }
             }
         } elseif ($action === 'update_status') {
@@ -173,7 +151,7 @@ $admin_users_stmt = $db->query($admin_users_sql);
 $admin_users = $admin_users_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Generate CSRF token
-$csrf_token = $csrfMiddleware->generateToken();
+$csrf_token = $csrfService->generateToken();
 
 // Include admin header
 include_admin_header('Ticket #' . substr($ticket_id, 0, 8));
@@ -182,7 +160,7 @@ include_admin_header('Ticket #' . substr($ticket_id, 0, 8));
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <div class="breadcrumb">
-            <a href="/karyalayportal/admin/support/tickets.php" class="breadcrumb-link">Support Tickets</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/support/tickets.php" class="breadcrumb-link">Support Tickets</a>
             <span class="breadcrumb-separator">/</span>
             <span class="breadcrumb-current">Ticket #<?php echo htmlspecialchars(substr($ticket_id, 0, 8)); ?></span>
         </div>

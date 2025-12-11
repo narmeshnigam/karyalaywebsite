@@ -128,9 +128,6 @@ class PortAllocationAtomicityPropertyTest extends TestCase
         $port = $this->portModel->findById($portId);
         $this->assertEquals($subscriptionId, $port['assigned_subscription_id']);
         
-        // Assert: Port is linked to customer
-        $this->assertEquals($customerId, $port['assigned_customer_id']);
-        
         // Assert: Subscription is linked to port
         $updatedSubscription = $this->subscriptionModel->findById($subscriptionId);
         $this->assertEquals($portId, $updatedSubscription['assigned_port_id']);
@@ -297,7 +294,6 @@ class PortAllocationAtomicityPropertyTest extends TestCase
         $port = $this->portModel->create([
             'instance_url' => 'https://test-' . bin2hex(random_bytes(8)) . '.example.com',
             'port_number' => rand(1000, 9999),
-            'plan_id' => $planId,
             'status' => $status
         ]);
         $this->testData['ports'][] = $port['id'];

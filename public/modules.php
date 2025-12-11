@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Modules Overview Page
  */
 
@@ -92,7 +92,7 @@ include_header($page_title, $page_description);
                                 <?php echo htmlspecialchars($module['description']); ?>
                             </p>
                             
-                            <a href="/karyalayportal/module.php?slug=<?php echo urlencode($module['slug']); ?>" 
+                            <a href="<?php echo get_base_url(); ?>/module.php?slug=<?php echo urlencode($module['slug']); ?>" 
                                class="btn btn-outline btn-sm">
                                 Learn More
                             </a>
@@ -114,8 +114,8 @@ include_header($page_title, $page_description);
                     Choose the modules that fit your business needs
                 </p>
                 <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="/karyalayportal/pricing.php" class="btn btn-primary btn-lg">View Pricing</a>
-                    <a href="/karyalayportal/contact.php" class="btn btn-outline btn-lg">Contact Us</a>
+                    <a href="<?php echo get_base_url(); ?>/pricing.php" class="btn btn-primary btn-lg">View Pricing</a>
+                    <a href="<?php echo get_base_url(); ?>/contact.php" class="btn btn-outline btn-lg">Contact Us</a>
                 </div>
             </div>
         </div>

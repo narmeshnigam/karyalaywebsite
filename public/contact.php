@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Contact Page
  */
 
@@ -50,7 +50,7 @@ $settings = $settingModel->getMultiple([
     'business_hours_weekend'
 ]);
 
-$site_name = $settings['site_name'] ?? 'Karyalay Portal';
+$site_name = $settings['site_name'] ?? 'SellerPortal';
 $contact_email = $settings['contact_email'] ?? '';
 $contact_phone = $settings['contact_phone'] ?? '';
 $contact_address = $settings['contact_address'] ?? '';
@@ -147,9 +147,9 @@ include_header($page_title, $page_description);
                     For faster support, please use our ticket system. Our support team monitors tickets and responds promptly.
                 </p>
                 <?php if (isAuthenticated()): ?>
-                    <a href="/karyalayportal/app/support/tickets/new.php" class="btn btn-primary">Create Support Ticket</a>
+                    <a href="<?php echo get_app_base_url(); ?>/app/support/tickets/new.php" class="btn btn-primary">Create Support Ticket</a>
                 <?php else: ?>
-                    <a href="/karyalayportal/login.php" class="btn btn-primary">Login to Create Ticket</a>
+                    <a href="<?php echo get_base_url(); ?>/login.php" class="btn btn-primary">Login to Create Ticket</a>
                 <?php endif; ?>
             </div>
 
@@ -164,7 +164,7 @@ include_header($page_title, $page_description);
                 <p class="contact-quick-text">
                     Check our FAQ section for quick answers to frequently asked questions about our services and features.
                 </p>
-                <a href="/karyalayportal/support.php" class="btn btn-outline">View FAQs</a>
+                <a href="<?php echo get_base_url(); ?>/support.php" class="btn btn-outline">View FAQs</a>
             </div>
         </div>
     </div>
@@ -279,7 +279,7 @@ include_header($page_title, $page_description);
                     <h3 class="contact-form-title">Send us a Message</h3>
                     <p class="contact-form-subtitle">Fill out the form below and we'll respond within 24-48 hours.</p>
                         
-                    <form method="POST" action="/karyalayportal/contact.php" class="contact-form">
+                    <form method="POST" action="<?php echo get_base_url(); ?>/contact.php" class="contact-form">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                         
                         <div class="contact-form-group">
@@ -311,15 +311,15 @@ include_header($page_title, $page_description);
                         </div>
                         
                         <div class="contact-form-group">
-                            <label for="phone" class="contact-form-label">
+                            <label for="phone-input" class="contact-form-label">
                                 Phone
                             </label>
-                            <input type="tel" 
-                                   id="phone" 
-                                   name="phone"
-                                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>"
-                                   class="contact-form-input"
-                                   placeholder="Your phone number (optional)">
+                            <?php echo render_phone_input([
+                                'id' => 'phone',
+                                'name' => 'phone',
+                                'value' => $_POST['phone'] ?? '',
+                                'required' => false,
+                            ]); ?>
                         </div>
                         
                         <div class="contact-form-group">

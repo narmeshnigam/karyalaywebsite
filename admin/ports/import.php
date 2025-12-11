@@ -2,6 +2,8 @@
 /**
  * Admin Port Bulk Import Page
  * Allows CSV upload for bulk port creation
+ * 
+ * Updated for port restructuring: ports are now plan-agnostic with resource limits
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
@@ -11,26 +13,17 @@ require_once __DIR__ . '/../../includes/template_helpers.php';
 
 use Karyalay\Services\PortService;
 use Karyalay\Services\CsrfService;
-use Karyalay\Models\Plan;
 
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and ports.import permission
 require_admin();
+require_permission('ports.import');
 
 // Initialize services
 $portService = new PortService();
 $csrfService = new CsrfService();
-$planModel = new Plan();
-
-// Fetch all plans for reference
-$allPlans = $planModel->findAll();
-$plansByName = [];
-foreach ($allPlans as $plan) {
-    $plansByName[strtolower($plan['name'])] = $plan['id'];
-    $plansByName[$plan['id']] = $plan['id']; // Also allow by ID
-}
 
 // Initialize variables
 $errors = [];
@@ -80,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($lineNumber === 1) {
                             $header = array_map('trim', $row);
                             // Validate required columns
-                            $requiredColumns = ['instance_url', 'plan'];
+                            $requiredColumns = ['instance_url'];
                             $missingColumns = array_diff($requiredColumns, array_map('strtolower', $header));
                             if (!empty($missingColumns)) {
                                 $parseErrors[] = "Missing required columns: " . implode(', ', $missingColumns);
@@ -109,20 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             continue;
                         }
                         $portData['instance_url'] = $rowData['instance_url'];
-
-                        // Plan (required) - can be plan name or ID
-                        if (empty($rowData['plan'])) {
-                            $parseErrors[$lineNumber] = "Line $lineNumber: plan is required";
-                            continue;
-                        }
-                        
-                        $planIdentifier = strtolower(trim($rowData['plan']));
-                        if (isset($plansByName[$planIdentifier])) {
-                            $portData['plan_id'] = $plansByName[$planIdentifier];
-                        } else {
-                            $parseErrors[$lineNumber] = "Line $lineNumber: plan '{$rowData['plan']}' not found";
-                            continue;
-                        }
 
                         // Database connection fields (optional)
                         if (!empty($rowData['db_host'])) {
@@ -192,7 +171,7 @@ include_admin_header('Import Ports');
         <p class="admin-page-description">Upload a CSV file to import multiple ports at once</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-secondary">
             ← Back to Ports
         </a>
     </div>
@@ -231,7 +210,7 @@ include_admin_header('Import Ports');
         <?php endif; ?>
         
         <div style="margin-top: var(--spacing-3);">
-            <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-primary">View All Ports</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-primary">View All Ports</a>
         </div>
     </div>
 <?php endif; ?>
@@ -259,13 +238,7 @@ include_admin_header('Import Ports');
                             <td><code>instance_url</code></td>
                             <td><span class="badge badge-required">Required</span></td>
                             <td>Full URL or IP address of the instance</td>
-                            <td>https://instance1.karyalay.com</td>
-                        </tr>
-                        <tr>
-                            <td><code>plan</code></td>
-                            <td><span class="badge badge-required">Required</span></td>
-                            <td>Plan name or ID</td>
-                            <td>Basic Plan</td>
+                            <td>https://instance1.example.com</td>
                         </tr>
                         <tr>
                             <td><code>db_host</code></td>
@@ -277,7 +250,7 @@ include_admin_header('Import Ports');
                             <td><code>db_name</code></td>
                             <td><span class="badge badge-optional">Optional</span></td>
                             <td>Database name</td>
-                            <td>karyalay_db</td>
+                            <td>app_db</td>
                         </tr>
                         <tr>
                             <td><code>db_username</code></td>
@@ -315,22 +288,10 @@ include_admin_header('Import Ports');
 
             <div class="example-section">
                 <h3 class="example-title">Example CSV Content:</h3>
-                <pre class="example-code">instance_url,plan,db_host,db_name,db_username,db_password,status,server_region,notes
-https://instance1.karyalay.com,Basic Plan,localhost,karyalay_db1,db_user1,pass123,AVAILABLE,US-East,Primary server
-https://instance2.karyalay.com,Pro Plan,db.example.com,karyalay_db2,db_user2,pass456,AVAILABLE,EU-West,
-http://192.168.1.100,Enterprise Plan,192.168.1.50,karyalay_db3,db_user3,pass789,RESERVED,Asia-Pacific,Testing server</pre>
-            </div>
-
-            <div class="available-plans">
-                <h3 class="example-title">Available Plans:</h3>
-                <ul class="plans-list">
-                    <?php foreach ($allPlans as $plan): ?>
-                        <li>
-                            <strong><?php echo htmlspecialchars($plan['name']); ?></strong>
-                            <span class="text-muted">(ID: <?php echo htmlspecialchars($plan['id']); ?>)</span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <pre class="example-code">instance_url,db_host,db_name,db_username,db_password,status,server_region,notes
+https://instance1.example.com,localhost,app_db1,db_user1,pass123,AVAILABLE,US-East,Primary server
+https://instance2.example.com,db.example.com,app_db2,db_user2,pass456,AVAILABLE,EU-West,
+http://192.168.1.100,192.168.1.50,app_db3,db_user3,pass789,RESERVED,Asia-Pacific,Testing server</pre>
             </div>
         </div>
 
@@ -355,7 +316,7 @@ http://192.168.1.100,Enterprise Plan,192.168.1.50,karyalay_db3,db_user3,pass789,
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Upload and Import</button>
-                    <a href="<?php echo get_base_url(); ?>/admin/ports.php" class="btn btn-secondary">Cancel</a>
+                    <a href="<?php echo get_app_base_url(); ?>/admin/ports.php" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
@@ -575,22 +536,22 @@ http://192.168.1.100,Enterprise Plan,192.168.1.50,karyalay_db3,db_user3,pass789,
     white-space: pre;
 }
 
-.available-plans {
+.resource-limits-info {
     margin-top: var(--spacing-4);
 }
 
-.plans-list {
+.limits-list {
     list-style: none;
     padding: 0;
     margin: var(--spacing-2) 0 0 0;
 }
 
-.plans-list li {
+.limits-list li {
     padding: var(--spacing-2);
     border-bottom: 1px solid var(--color-gray-200);
 }
 
-.plans-list li:last-child {
+.limits-list li:last-child {
     border-bottom: none;
 }
 

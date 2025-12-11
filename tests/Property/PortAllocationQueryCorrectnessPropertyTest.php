@@ -120,19 +120,19 @@ class PortAllocationQueryCorrectnessPropertyTest extends TestCase
     }
 
     /**
-     * Property: Port allocation queries only ports matching plan ID
+     * Property: Port allocation queries any available port (plan-agnostic)
      * 
      * @test
      */
-    public function portAllocationQueriesOnlyPortsMatchingPlanId(): void
+    public function portAllocationQueriesAnyAvailablePort(): void
     {
         // Create two different plans
         $plan1Id = $this->createTestPlan();
         $plan2Id = $this->createTestPlan();
         
-        // Create available ports for both plans
-        $plan1Port = $this->createTestPort($plan1Id, 'AVAILABLE');
-        $plan2Port = $this->createTestPort($plan2Id, 'AVAILABLE');
+        // Create available ports (ports are now plan-agnostic)
+        $port1 = $this->createTestPort($plan1Id, 'AVAILABLE');
+        $port2 = $this->createTestPort($plan2Id, 'AVAILABLE');
         
         // Create subscription for plan1
         $subscriptionId = $this->createTestSubscription($plan1Id);
@@ -143,14 +143,16 @@ class PortAllocationQueryCorrectnessPropertyTest extends TestCase
         // Assert: Allocation succeeded
         $this->assertTrue($result['success']);
         
-        // Assert: Allocated port belongs to plan1, not plan2
+        // Assert: Allocated port is one of the available ports (any port can be allocated)
         $allocatedPortId = $result['port']['id'];
-        $this->assertEquals($plan1Port, $allocatedPortId);
-        $this->assertNotEquals($plan2Port, $allocatedPortId);
+        $this->assertTrue(
+            $allocatedPortId === $port1 || $allocatedPortId === $port2,
+            'Allocated port should be one of the available ports'
+        );
         
-        // Assert: Plan2 port is still AVAILABLE
-        $plan2PortData = $this->portModel->findById($plan2Port);
-        $this->assertEquals('AVAILABLE', $plan2PortData['status']);
+        // Assert: Allocated port status is now ASSIGNED
+        $allocatedPort = $this->portModel->findById($allocatedPortId);
+        $this->assertEquals('ASSIGNED', $allocatedPort['status']);
     }
 
     /**
@@ -269,14 +271,13 @@ class PortAllocationQueryCorrectnessPropertyTest extends TestCase
     }
 
     /**
-     * Helper: Create test port
+     * Helper: Create test port (plan-agnostic)
      */
     private function createTestPort(string $planId, string $status): string
     {
         $portData = [
             'instance_url' => 'https://test-' . bin2hex(random_bytes(8)) . '.example.com',
             'port_number' => rand(1000, 9999),
-            'plan_id' => $planId,
             'status' => $status
         ];
         

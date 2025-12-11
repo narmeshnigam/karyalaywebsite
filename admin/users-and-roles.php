@@ -10,12 +10,17 @@ require_once __DIR__ . '/../includes/admin_helpers.php';
 require_once __DIR__ . '/../includes/template_helpers.php';
 
 use Karyalay\Models\User;
+use Karyalay\Services\RoleService;
 
 startSecureSession();
 require_admin();
+require_permission('users.view');
 
 $db = \Karyalay\Database\Connection::getInstance();
 $userModel = new User();
+
+// Get admin roles for filtering
+$adminRoles = RoleService::getAdminRoles();
 
 // Get filters from query parameters
 $role_filter = $_GET['role'] ?? '';
@@ -24,18 +29,22 @@ $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
-// Build query for counting total admin users
-$count_sql = "SELECT COUNT(*) FROM users WHERE role IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR')";
-$count_params = [];
+// Build query for counting total admin users (users with any admin role)
+$adminRolesPlaceholders = implode(',', array_fill(0, count($adminRoles), '?'));
+$count_sql = "SELECT COUNT(DISTINCT u.id) FROM users u 
+              INNER JOIN user_roles ur ON u.id = ur.user_id 
+              WHERE ur.role IN ($adminRolesPlaceholders)";
+$count_params = $adminRoles;
 
 if (!empty($role_filter)) {
-    $count_sql .= " AND role = :role";
-    $count_params[':role'] = $role_filter;
+    $count_sql .= " AND ur.role = ?";
+    $count_params[] = $role_filter;
 }
 
 if (!empty($search_query)) {
-    $count_sql .= " AND (name LIKE :search OR email LIKE :search)";
-    $count_params[':search'] = '%' . $search_query . '%';
+    $count_sql .= " AND (u.name LIKE ? OR u.email LIKE ?)";
+    $count_params[] = '%' . $search_query . '%';
+    $count_params[] = '%' . $search_query . '%';
 }
 
 try {
@@ -45,40 +54,83 @@ try {
     $total_pages = ceil($total_users / $per_page);
 } catch (PDOException $e) {
     error_log("Admin users count error: " . $e->getMessage());
+    // Fallback to legacy query if user_roles table doesn't exist yet
     $total_users = 0;
     $total_pages = 0;
 }
 
-// Build query for fetching admin users
-$sql = "SELECT * FROM users WHERE role IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR')";
-$params = [];
+// Build query for fetching admin users with their roles
+$sql = "SELECT DISTINCT u.*, GROUP_CONCAT(ur.role ORDER BY ur.role SEPARATOR ',') as roles
+        FROM users u 
+        INNER JOIN user_roles ur ON u.id = ur.user_id 
+        WHERE ur.role IN ($adminRolesPlaceholders)";
+$params = $adminRoles;
 
 if (!empty($role_filter)) {
-    $sql .= " AND role = :role";
-    $params[':role'] = $role_filter;
+    $sql .= " AND u.id IN (SELECT user_id FROM user_roles WHERE role = ?)";
+    $params[] = $role_filter;
 }
 
 if (!empty($search_query)) {
-    $sql .= " AND (name LIKE :search OR email LIKE :search)";
-    $params[':search'] = '%' . $search_query . '%';
+    $sql .= " AND (u.name LIKE ? OR u.email LIKE ?)";
+    $params[] = '%' . $search_query . '%';
+    $params[] = '%' . $search_query . '%';
 }
 
-$sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+$sql .= " GROUP BY u.id ORDER BY u.created_at DESC LIMIT ? OFFSET ?";
+$params[] = $per_page;
+$params[] = $offset;
 
 try {
     $stmt = $db->prepare($sql);
-    
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value);
-    }
-    $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    
-    $stmt->execute();
+    $stmt->execute($params);
     $admin_users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Admin users list error: " . $e->getMessage());
+    // Fallback to legacy query
     $admin_users = [];
+}
+
+// If user_roles table doesn't exist or is empty, fall back to legacy behavior
+if (empty($admin_users) && $total_users === 0) {
+    try {
+        $legacy_sql = "SELECT * FROM users WHERE role IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR', 'INFRASTRUCTURE', 'SALES_MANAGER', 'OPERATIONS', 'CONTENT_MANAGER')";
+        $legacy_params = [];
+        
+        if (!empty($role_filter)) {
+            $legacy_sql .= " AND role = :role";
+            $legacy_params[':role'] = $role_filter;
+        }
+        
+        if (!empty($search_query)) {
+            $legacy_sql .= " AND (name LIKE :search OR email LIKE :search)";
+            $legacy_params[':search'] = '%' . $search_query . '%';
+        }
+        
+        $legacy_sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+        
+        $stmt = $db->prepare($legacy_sql);
+        foreach ($legacy_params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $admin_users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add roles field for legacy users
+        foreach ($admin_users as &$user) {
+            $user['roles'] = $user['role'];
+        }
+        
+        // Count for legacy
+        $count_sql = "SELECT COUNT(*) FROM users WHERE role IN ('ADMIN', 'SUPPORT', 'SALES', 'CONTENT_EDITOR', 'INFRASTRUCTURE', 'SALES_MANAGER', 'OPERATIONS', 'CONTENT_MANAGER')";
+        $count_stmt = $db->query($count_sql);
+        $total_users = $count_stmt->fetchColumn();
+        $total_pages = ceil($total_users / $per_page);
+    } catch (PDOException $e) {
+        error_log("Legacy admin users query error: " . $e->getMessage());
+    }
 }
 
 include_admin_header('Users & Roles');
@@ -87,18 +139,20 @@ include_admin_header('Users & Roles');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <h1 class="admin-page-title">Users & Roles Management</h1>
-        <p class="admin-page-description">Manage admin users and their roles</p>
+        <p class="admin-page-description">Manage admin users and their roles. Users can have multiple roles assigned.</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/users-and-roles/roles.php" class="btn btn-secondary">
+        <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles/roles.php" class="btn btn-secondary">
             View Roles & Permissions
         </a>
-        <a href="<?php echo get_base_url(); ?>/admin/users-and-roles/new.php" class="btn btn-primary">
+        <?php if (has_permission('users.create')): ?>
+        <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles/new.php" class="btn btn-primary">
             <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
             Create Admin User
         </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -118,7 +172,7 @@ include_admin_header('Users & Roles');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/users-and-roles.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -135,16 +189,19 @@ include_admin_header('Users & Roles');
             <label for="role" class="admin-filter-label">Role</label>
             <select id="role" name="role" class="admin-filter-select">
                 <option value="">All Roles</option>
-                <option value="ADMIN" <?php echo $role_filter === 'ADMIN' ? 'selected' : ''; ?>>Admin</option>
+                <option value="ADMIN" <?php echo $role_filter === 'ADMIN' ? 'selected' : ''; ?>>Administrator</option>
                 <option value="SUPPORT" <?php echo $role_filter === 'SUPPORT' ? 'selected' : ''; ?>>Support</option>
+                <option value="INFRASTRUCTURE" <?php echo $role_filter === 'INFRASTRUCTURE' ? 'selected' : ''; ?>>Infrastructure</option>
                 <option value="SALES" <?php echo $role_filter === 'SALES' ? 'selected' : ''; ?>>Sales</option>
-                <option value="CONTENT_EDITOR" <?php echo $role_filter === 'CONTENT_EDITOR' ? 'selected' : ''; ?>>Content Editor</option>
+                <option value="SALES_MANAGER" <?php echo $role_filter === 'SALES_MANAGER' ? 'selected' : ''; ?>>Sales Manager</option>
+                <option value="OPERATIONS" <?php echo $role_filter === 'OPERATIONS' ? 'selected' : ''; ?>>Operations</option>
+                <option value="CONTENT_MANAGER" <?php echo $role_filter === 'CONTENT_MANAGER' ? 'selected' : ''; ?>>Content Manager</option>
             </select>
         </div>
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/users-and-roles.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -167,10 +224,12 @@ include_admin_header('Users & Roles');
                     <tr>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Role</th>
+                        <th>Roles</th>
                         <th>Created</th>
                         <th>Email Verified</th>
+                        <?php if (has_permission('users.edit')): ?>
                         <th>Actions</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -185,7 +244,17 @@ include_admin_header('Users & Roles');
                                 <?php echo htmlspecialchars($user['email']); ?>
                             </td>
                             <td>
-                                <?php echo get_role_badge($user['role']); ?>
+                                <div class="role-badges">
+                                    <?php 
+                                    $userRoles = isset($user['roles']) ? explode(',', $user['roles']) : [$user['role']];
+                                    // Filter out CUSTOMER role for display
+                                    $displayRoles = array_filter($userRoles, function($r) { return $r !== 'CUSTOMER' && !empty($r); });
+                                    if (empty($displayRoles)) $displayRoles = ['CUSTOMER'];
+                                    foreach ($displayRoles as $role): 
+                                    ?>
+                                        <?php echo get_role_badge(trim($role)); ?>
+                                    <?php endforeach; ?>
+                                </div>
                             </td>
                             <td><?php echo get_relative_time($user['created_at']); ?></td>
                             <td>
@@ -195,14 +264,16 @@ include_admin_header('Users & Roles');
                                     <span class="badge badge-warning">Not Verified</span>
                                 <?php endif; ?>
                             </td>
+                            <?php if (has_permission('users.edit')): ?>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/users-and-roles/edit.php?id=<?php echo urlencode($user['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/users-and-roles/edit.php?id=<?php echo urlencode($user['id']); ?>" 
                                        class="btn btn-sm btn-secondary">
                                         Edit
                                     </a>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -338,6 +409,24 @@ include_admin_header('Users & Roles');
     font-size: 14px;
     color: var(--color-gray-600);
     margin: 0;
+}
+.role-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+/* Badge colors for new roles */
+.badge-purple {
+    background-color: #8b5cf6;
+    color: white;
+}
+.badge-teal {
+    background-color: #14b8a6;
+    color: white;
+}
+.badge-orange {
+    background-color: #f97316;
+    color: white;
 }
 @media (max-width: 768px) {
     .admin-page-header {

@@ -13,8 +13,9 @@ use Karyalay\Services\ContentService;
 // Start secure session
 startSecureSession();
 
-// Require admin authentication
+// Require admin authentication and solutions.manage permission
 require_admin();
+require_permission('solutions.manage');
 
 // Get database connection
 $db = \Karyalay\Database\Connection::getInstance();
@@ -113,8 +114,7 @@ include_admin_header('Modules');
         <p class="admin-page-description">Manage product modules displayed on the public website</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/modules/new.php" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
+        <a href="<?php echo get_app_base_url(); ?>/admin/modules/new.php" class="btn btn-primary">
             Create New Module
         </a>
     </div>
@@ -122,7 +122,7 @@ include_admin_header('Modules');
 
 <!-- Filters and Search -->
 <div class="admin-filters-section">
-    <form method="GET" action="<?php echo get_base_url(); ?>/admin/modules.php" class="admin-filters-form">
+    <form method="GET" action="<?php echo get_app_base_url(); ?>/admin/modules.php" class="admin-filters-form">
         <div class="admin-filter-group">
             <label for="search" class="admin-filter-label">Search</label>
             <input 
@@ -147,7 +147,7 @@ include_admin_header('Modules');
         
         <div class="admin-filter-actions">
             <button type="submit" class="btn btn-secondary">Apply Filters</button>
-            <a href="<?php echo get_base_url(); ?>/admin/modules.php" class="btn btn-text">Clear</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/modules.php" class="btn btn-text">Clear</a>
         </div>
     </form>
 </div>
@@ -205,12 +205,12 @@ include_admin_header('Modules');
                             <td><?php echo get_relative_time($module['created_at']); ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a href="<?php echo get_base_url(); ?>/admin/modules/edit.php?id=<?php echo urlencode($module['id']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/admin/modules/edit.php?id=<?php echo urlencode($module['id']); ?>" 
                                        class="btn btn-sm btn-secondary"
                                        title="Edit module">
                                         Edit
                                     </a>
-                                    <a href="<?php echo get_base_url(); ?>/module/<?php echo urlencode($module['slug']); ?>" 
+                                    <a href="<?php echo get_app_base_url(); ?>/module/<?php echo urlencode($module['slug']); ?>" 
                                        class="btn btn-sm btn-text"
                                        target="_blank"
                                        title="View on site">

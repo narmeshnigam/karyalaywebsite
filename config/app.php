@@ -7,7 +7,7 @@
  */
 
 return [
-    'name' => 'Karyalay Portal System',
+    'name' => 'SellerPortal',
     'env' => getenv('APP_ENV') ?: 'development',
     'debug' => getenv('APP_DEBUG') === 'true',
     'url' => getenv('APP_URL') ?: 'http://localhost',
@@ -34,5 +34,5 @@ return [
     'razorpay_webhook_secret' => getenv('RAZORPAY_WEBHOOK_SECRET') ?: '',
     
     // Admin email
-    'admin_email' => getenv('ADMIN_EMAIL') ?: 'admin@karyalay.com',
+    'admin_email' => getenv('ADMIN_EMAIL') ?: 'admin@example.com',
 ];

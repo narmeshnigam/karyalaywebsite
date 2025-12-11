@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Case Study Detail Page
  */
 
@@ -36,7 +36,7 @@ use Karyalay\Models\CaseStudy;
 $slug = $_GET['slug'] ?? '';
 
 if (empty($slug)) {
-    header('Location: /karyalayportal/case-studies.php');
+    header('Location: ' . get_base_url() . '/case-studies.php');
     exit;
 }
 
@@ -57,7 +57,7 @@ try {
                     <div class="card-body text-center">
                         <h1 class="text-3xl font-bold mb-4">Case Study Not Found</h1>
                         <p class="text-gray-600 mb-6">The case study you're looking for doesn't exist or is no longer available.</p>
-                        <a href="/karyalayportal/case-studies.php" class="btn btn-primary">View All Case Studies</a>
+                        <a href="<?php echo get_base_url(); ?>/case-studies.php" class="btn btn-primary">View All Case Studies</a>
                     </div>
                 </div>
             </div>
@@ -80,7 +80,7 @@ try {
                 <div class="card-body text-center">
                     <h1 class="text-3xl font-bold mb-4">Error</h1>
                     <p class="text-gray-600 mb-6">An error occurred while loading the case study. Please try again later.</p>
-                    <a href="/karyalayportal/case-studies.php" class="btn btn-primary">View All Case Studies</a>
+                    <a href="<?php echo get_base_url(); ?>/case-studies.php" class="btn btn-primary">View All Case Studies</a>
                 </div>
             </div>
         </div>
@@ -178,8 +178,8 @@ include_header($page_title, $page_description);
                     Let Karyalay help transform your business operations
                 </p>
                 <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="/karyalayportal/pricing.php" class="btn btn-primary btn-lg">Get Started</a>
-                    <a href="/karyalayportal/case-studies.php" class="btn btn-outline btn-lg">More Case Studies</a>
+                    <a href="<?php echo get_base_url(); ?>/pricing.php" class="btn btn-primary btn-lg">Get Started</a>
+                    <a href="<?php echo get_base_url(); ?>/case-studies.php" class="btn btn-outline btn-lg">More Case Studies</a>
                 </div>
             </div>
         </div>

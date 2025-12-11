@@ -12,6 +12,7 @@ use Karyalay\Models\Testimonial;
 
 startSecureSession();
 require_admin();
+require_permission('testimonials.manage');
 
 $testimonialModel = new Testimonial();
 
@@ -19,7 +20,7 @@ $testimonial_id = $_GET['id'] ?? '';
 
 if (empty($testimonial_id)) {
     $_SESSION['admin_error'] = 'Testimonial ID is required.';
-    header('Location: ' . get_base_url() . '/admin/testimonials.php');
+    header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
     exit;
 }
 
@@ -27,7 +28,7 @@ $testimonial = $testimonialModel->findById($testimonial_id);
 
 if (!$testimonial) {
     $_SESSION['admin_error'] = 'Testimonial not found.';
-    header('Location: ' . get_base_url() . '/admin/testimonials.php');
+    header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
     exit;
 }
 
@@ -79,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Testimonial updated successfully!';
-                header('Location: ' . get_base_url() . '/admin/testimonials.php');
+                header('Location: ' . get_app_base_url() . '/admin/testimonials.php');
                 exit;
             } else {
                 $errors[] = 'Failed to update testimonial.';
@@ -95,7 +96,7 @@ include_admin_header('Edit Testimonial');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/testimonials.php">Testimonials</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php">Testimonials</a>
             <span class="breadcrumb-separator">/</span>
             <span>Edit Testimonial</span>
         </nav>
@@ -103,7 +104,7 @@ include_admin_header('Edit Testimonial');
         <p class="admin-page-description">Update testimonial information</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">← Back to Testimonials</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">← Back to Testimonials</a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Testimonial</button>
     </div>
 </div>
@@ -116,7 +117,7 @@ include_admin_header('Edit Testimonial');
 <?php endif; ?>
 
 <div class="admin-card">
-    <form method="POST" action="<?php echo get_base_url(); ?>/admin/testimonials/edit.php?id=<?php echo urlencode($testimonial_id); ?>" class="admin-form">
+    <form method="POST" action="<?php echo get_app_base_url(); ?>/admin/testimonials/edit.php?id=<?php echo urlencode($testimonial_id); ?>" class="admin-form">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         
         <div class="form-section">
@@ -222,12 +223,12 @@ include_admin_header('Edit Testimonial');
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Testimonial</button>
-            <a href="<?php echo get_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">Cancel</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/testimonials.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
 
-<form id="deleteForm" method="POST" action="<?php echo get_base_url(); ?>/admin/testimonials/delete.php" style="display: none;">
+<form id="deleteForm" method="POST" action="<?php echo get_app_base_url(); ?>/admin/testimonials/delete.php" style="display: none;">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="id" value="<?php echo htmlspecialchars($testimonial_id); ?>">
 </form>

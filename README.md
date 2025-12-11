@@ -1,4 +1,4 @@
-# Karyalay Portal System
+# SellerPortal System
 
 A comprehensive web application with public marketing website, customer portal, and admin panel.
 

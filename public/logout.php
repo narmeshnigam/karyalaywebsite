@@ -1,12 +1,13 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Logout Page
  */
 
 // Load authentication helpers
 require_once __DIR__ . '/../includes/auth_helpers.php';
+require_once __DIR__ . '/../includes/template_helpers.php';
 
 // Start secure session
 startSecureSession();
@@ -28,5 +29,5 @@ if (isset($_COOKIE['remember_token'])) {
 session_destroy();
 
 // Redirect to home page
-header('Location: /karyalayportal/');
+header('Location: ' . get_base_url() . '/');
 exit;

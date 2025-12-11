@@ -1,6 +1,6 @@
 # Monitoring and Logging Guide
 
-This document describes the monitoring and logging infrastructure for the Karyalay Portal System.
+This document describes the monitoring and logging infrastructure for the SellerPortal System.
 
 ## Overview
 

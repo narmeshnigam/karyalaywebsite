@@ -21,8 +21,9 @@ $config = require __DIR__ . '/../config/app.php';
 // Load authentication helpers
 require_once __DIR__ . '/../includes/auth_helpers.php';
 
-// Load Lead model
+// Load Lead model and EmailService
 use Karyalay\Models\Lead;
+use Karyalay\Services\EmailService;
 
 // Start secure session
 startSecureSession();
@@ -94,6 +95,25 @@ try {
     $lead = $leadModel->create($leadData);
     
     if ($lead) {
+        // Send emails
+        $emailService = new EmailService();
+        
+        // Send thank you email to the lead
+        try {
+            $emailService->sendLeadThankYouEmail($leadData['email'], $leadData['name']);
+        } catch (Exception $e) {
+            error_log('Failed to send thank you email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
+        
+        // Send notification email to admin
+        try {
+            $emailService->sendLeadNotification($leadData);
+        } catch (Exception $e) {
+            error_log('Failed to send admin notification email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
+        
         // Success response
         echo json_encode([
             'success' => true,

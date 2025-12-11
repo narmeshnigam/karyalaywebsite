@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive monitoring and logging infrastructure has been implemented for the Karyalay Portal System.
+Comprehensive monitoring and logging infrastructure has been implemented for the SellerPortal System.
 
 ## Components Implemented
 

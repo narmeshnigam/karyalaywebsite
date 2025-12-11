@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Blog Post Detail Page
  */
 
@@ -37,7 +37,7 @@ use Karyalay\Models\User;
 $slug = $_GET['slug'] ?? '';
 
 if (empty($slug)) {
-    header('Location: /karyalayportal/blog.php');
+    header('Location: ' . get_base_url() . '/blog.php');
     exit;
 }
 
@@ -58,7 +58,7 @@ try {
                     <div class="card-body text-center">
                         <h1 class="text-3xl font-bold mb-4">Post Not Found</h1>
                         <p class="text-gray-600 mb-6">The blog post you're looking for doesn't exist or is no longer available.</p>
-                        <a href="/karyalayportal/blog.php" class="btn btn-primary">View All Posts</a>
+                        <a href="<?php echo get_base_url(); ?>/blog.php" class="btn btn-primary">View All Posts</a>
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@ try {
                 <div class="card-body text-center">
                     <h1 class="text-3xl font-bold mb-4">Error</h1>
                     <p class="text-gray-600 mb-6">An error occurred while loading the blog post. Please try again later.</p>
-                    <a href="/karyalayportal/blog.php" class="btn btn-primary">View All Posts</a>
+                    <a href="<?php echo get_base_url(); ?>/blog.php" class="btn btn-primary">View All Posts</a>
                 </div>
             </div>
         </div>
@@ -150,7 +150,7 @@ include_header($page_title, $page_description);
 <section class="section bg-gray-50">
     <div class="container">
         <div class="max-w-4xl mx-auto text-center">
-            <a href="/karyalayportal/blog.php" class="btn btn-outline">
+            <a href="<?php echo get_base_url(); ?>/blog.php" class="btn btn-outline">
                 ← Back to Blog
             </a>
         </div>

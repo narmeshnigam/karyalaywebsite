@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Karyalay Portal System
+ * SellerPortal System
  * Module Detail Page
  */
 
@@ -36,7 +36,7 @@ use Karyalay\Models\Module;
 $slug = $_GET['slug'] ?? '';
 
 if (empty($slug)) {
-    header('Location: /karyalayportal/modules.php');
+    header('Location: ' . get_base_url() . '/modules.php');
     exit;
 }
 
@@ -57,7 +57,7 @@ try {
                     <div class="card-body text-center">
                         <h1 class="text-3xl font-bold mb-4">Module Not Found</h1>
                         <p class="text-gray-600 mb-6">The module you're looking for doesn't exist or is no longer available.</p>
-                        <a href="/karyalayportal/modules.php" class="btn btn-primary">View All Modules</a>
+                        <a href="<?php echo get_base_url(); ?>/modules.php" class="btn btn-primary">View All Modules</a>
                     </div>
                 </div>
             </div>
@@ -80,7 +80,7 @@ try {
                 <div class="card-body text-center">
                     <h1 class="text-3xl font-bold mb-4">Error</h1>
                     <p class="text-gray-600 mb-6">An error occurred while loading the module. Please try again later.</p>
-                    <a href="/karyalayportal/modules.php" class="btn btn-primary">View All Modules</a>
+                    <a href="<?php echo get_base_url(); ?>/modules.php" class="btn btn-primary">View All Modules</a>
                 </div>
             </div>
         </div>
@@ -196,8 +196,8 @@ include_header($page_title, $page_description);
                     Start using <?php echo htmlspecialchars($module['name']); ?> today
                 </p>
                 <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="/karyalayportal/pricing.php" class="btn btn-primary btn-lg">View Pricing</a>
-                    <a href="/karyalayportal/modules.php" class="btn btn-outline btn-lg">View All Modules</a>
+                    <a href="<?php echo get_base_url(); ?>/pricing.php" class="btn btn-primary btn-lg">View Pricing</a>
+                    <a href="<?php echo get_base_url(); ?>/modules.php" class="btn btn-outline btn-lg">View All Modules</a>
                 </div>
             </div>
         </div>

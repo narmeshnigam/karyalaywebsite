@@ -1,6 +1,6 @@
 # Deployment Pipeline Setup Summary
 
-This document summarizes the deployment pipeline and infrastructure setup for the Karyalay Portal System.
+This document summarizes the deployment pipeline and infrastructure setup for the SellerPortal System.
 
 ## What Was Implemented
 

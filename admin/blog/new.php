@@ -12,6 +12,7 @@ use Karyalay\Services\ContentService;
 
 startSecureSession();
 require_admin();
+require_permission('blog.manage');
 
 $contentService = new ContentService();
 
@@ -73,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result) {
                 $_SESSION['admin_success'] = 'Blog post created successfully!';
-                header('Location: ' . get_base_url() . '/admin/blog.php');
+                header('Location: ' . get_app_base_url() . '/admin/blog.php');
                 exit;
             } else {
                 $errors[] = 'Failed to create blog post. Please check if the slug is unique.';
@@ -92,7 +93,7 @@ include_admin_header('Create Blog Post');
 <div class="admin-page-header">
     <div class="admin-page-header-content">
         <nav class="admin-breadcrumb">
-            <a href="<?php echo get_base_url(); ?>/admin/blog.php">Blog Posts</a>
+            <a href="<?php echo get_app_base_url(); ?>/admin/blog.php">Blog Posts</a>
             <span class="breadcrumb-separator">/</span>
             <span>Create Post</span>
         </nav>
@@ -100,7 +101,7 @@ include_admin_header('Create Blog Post');
         <p class="admin-page-description">Write and publish a new blog post</p>
     </div>
     <div class="admin-page-header-actions">
-        <a href="<?php echo get_base_url(); ?>/admin/blog.php" class="btn btn-secondary">← Back to Blog Posts</a>
+        <a href="<?php echo get_app_base_url(); ?>/admin/blog.php" class="btn btn-secondary">← Back to Blog Posts</a>
     </div>
 </div>
 
@@ -111,7 +112,7 @@ include_admin_header('Create Blog Post');
     </div>
 <?php endif; ?>
 
-<form method="POST" action="<?php echo get_base_url(); ?>/admin/blog/new.php" class="blog-form" id="blogForm">
+<form method="POST" action="<?php echo get_app_base_url(); ?>/admin/blog/new.php" class="blog-form" id="blogForm">
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
     <input type="hidden" name="content" id="contentInput">
     
@@ -129,7 +130,7 @@ include_admin_header('Create Blog Post');
                     <div class="form-group">
                         <label for="slug" class="form-label">Slug</label>
                         <div class="slug-preview">
-                            <span class="slug-prefix"><?php echo get_base_url(); ?>/blog/</span>
+                            <span class="slug-prefix"><?php echo get_app_base_url(); ?>/blog/</span>
                             <input type="text" id="slug" name="slug" class="form-input" 
                                 value="<?php echo htmlspecialchars($form_data['slug']); ?>"
                                 pattern="[a-z0-9\-]+" maxlength="255" placeholder="post-url-slug">
@@ -194,7 +195,7 @@ include_admin_header('Create Blog Post');
                     
                     <div class="form-actions-sidebar">
                         <button type="submit" class="btn btn-primary btn-block">Create Post</button>
-                        <a href="<?php echo get_base_url(); ?>/admin/blog.php" class="btn btn-secondary btn-block">Cancel</a>
+                        <a href="<?php echo get_app_base_url(); ?>/admin/blog.php" class="btn btn-secondary btn-block">Cancel</a>
                     </div>
                 </div>
             </div>

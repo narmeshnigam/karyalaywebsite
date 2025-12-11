@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Insert default settings
 INSERT INTO settings (id, setting_key, setting_value, setting_type) VALUES
-(UUID(), 'site_name', 'Karyalay Portal', 'string'),
+(UUID(), 'site_name', 'SellerPortal', 'string'),
 (UUID(), 'contact_email', 'contact@karyalay.com', 'string'),
 (UUID(), 'contact_phone', '+1 (555) 123-4567', 'string'),
 (UUID(), 'footer_text', '© 2024 Karyalay. All rights reserved.', 'string'),
