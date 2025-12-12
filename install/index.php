@@ -24,6 +24,7 @@ require_once __DIR__ . '/includes/message_helpers.php';
 
 use Karyalay\Services\InstallationService;
 use Karyalay\Services\CsrfService;
+use Karyalay\Services\UrlService;
 
 // Initialize services
 $installationService = new InstallationService();
@@ -31,14 +32,12 @@ $csrfService = new CsrfService();
 
 // Check if already installed - redirect to main app if so
 if ($installationService->isInstalled()) {
-    // Determine base path
-    $basePath = dirname($_SERVER['SCRIPT_NAME']);
-    $basePath = str_replace('/install', '', $basePath);
-    if ($basePath === '/' || $basePath === '\\') {
-        $basePath = '';
-    }
+    // Use UrlService for proper URL resolution
+    // Requirements: 7.3 - Use resolved base URL for redirects
+    $urlService = new UrlService();
+    $homepageUrl = $urlService->getHomepageUrl();
     
-    header('Location: ' . $basePath . '/');
+    header('Location: ' . $homepageUrl);
     exit;
 }
 
@@ -235,14 +234,14 @@ if (!isset($isComplete)) {
             
             <div class="complete-actions">
                 <?php
-                $basePath = dirname($_SERVER['SCRIPT_NAME']);
-                $basePath = str_replace('/install', '', $basePath);
-                if ($basePath === '/' || $basePath === '\\') {
-                    $basePath = '';
-                }
+                // Use UrlService for proper URL resolution
+                // Requirements: 7.3 - Use resolved base URL for admin dashboard redirect
+                $urlService = new UrlService();
+                $adminUrl = $urlService->getAdminDashboardUrl();
+                $homepageUrl = $urlService->getHomepageUrl();
                 ?>
-                <a href="<?php echo $basePath; ?>/admin/dashboard.php" class="btn btn-primary">Go to Admin Panel</a>
-                <a href="<?php echo $basePath; ?>/" class="btn btn-secondary">Go to Website</a>
+                <a href="<?php echo htmlspecialchars($adminUrl); ?>" class="btn btn-primary">Go to Admin Panel</a>
+                <a href="<?php echo htmlspecialchars($homepageUrl); ?>" class="btn btn-secondary">Go to Website</a>
             </div>
         </div>
     <?php else: ?>

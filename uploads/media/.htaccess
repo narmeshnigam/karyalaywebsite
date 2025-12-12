@@ -1,0 +1,18 @@
+# Allow access to media files
+<FilesMatch "\.(jpg|jpeg|png|gif|svg|webp|ico|pdf|mp4|mp3|webm)$">
+    Order Allow,Deny
+    Allow from all
+    Require all granted
+</FilesMatch>
+
+# Deny access to hidden files
+<FilesMatch "^\.">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Prevent PHP execution in uploads
+<FilesMatch "\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

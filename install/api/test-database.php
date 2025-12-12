@@ -3,9 +3,9 @@
  * Installation Wizard - Test Database Connection API
  * 
  * This endpoint tests database connection with provided credentials.
- * Returns JSON response with success status and error details.
+ * Returns JSON response with success status and detailed error information.
  * 
- * Requirements: 2.2
+ * Requirements: 2.2, 6.3, 6.4, 6.5
  */
 
 // Set JSON response header
@@ -21,6 +21,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Karyalay\Services\InstallationService;
 use Karyalay\Services\CsrfService;
+use Karyalay\Services\DatabaseValidationService;
 
 // Initialize services
 $installationService = new InstallationService();
@@ -104,27 +105,40 @@ $credentials = [
     'unix_socket' => trim($data['unix_socket'] ?? '')
 ];
 
-// Test database connection
+// Test database connection with detailed error handling
 try {
-    $result = $installationService->testDatabaseConnection($credentials);
+    $validationService = new DatabaseValidationService();
+    $result = $validationService->testConnection($credentials);
     
     if ($result['success']) {
         http_response_code(200);
         echo json_encode([
             'success' => true,
-            'message' => 'Database connection successful! You can proceed to the next step.'
+            'message' => 'Database connection successful! You can proceed to the next step.',
+            'server_info' => $result['server_info']
         ]);
     } else {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Database connection failed: ' . $result['error']
+            'message' => $result['error_message'],
+            'error_type' => $result['error_type'],
+            'error_details' => $result['error_details'],
+            'troubleshooting' => $result['troubleshooting'],
+            'field' => $result['field']
         ]);
     }
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'An error occurred: ' . $e->getMessage()
+        'message' => 'An unexpected error occurred while testing the connection.',
+        'error_type' => 'unknown',
+        'error_details' => $e->getMessage(),
+        'troubleshooting' => [
+            'Please try again',
+            'If the problem persists, contact support'
+        ],
+        'field' => null
     ]);
 }

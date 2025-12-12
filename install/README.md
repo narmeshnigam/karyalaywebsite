@@ -6,12 +6,13 @@
 2. [System Requirements](#system-requirements)
 3. [Quick Start](#quick-start)
 4. [Installation Steps](#installation-steps)
-5. [Environment-Specific Instructions](#environment-specific-instructions)
-6. [Troubleshooting](#troubleshooting)
-7. [Manual Installation](#manual-installation)
-8. [Re-running the Wizard](#re-running-the-wizard)
-9. [Security Considerations](#security-considerations)
-10. [Support](#support)
+5. [Dual-Environment Configuration](#dual-environment-configuration)
+6. [Environment-Specific Instructions](#environment-specific-instructions)
+7. [Troubleshooting](#troubleshooting)
+8. [Manual Installation](#manual-installation)
+9. [Re-running the Wizard](#re-running-the-wizard)
+10. [Security Considerations](#security-considerations)
+11. [Support](#support)
 
 ---
 
@@ -223,6 +224,189 @@ After completing all steps:
 - A lock file is created to prevent re-running the wizard
 - You're redirected to the admin panel login
 - Use the credentials you created in Step 3 to log in
+
+---
+
+## Dual-Environment Configuration
+
+The SellerPortal System supports dual-environment database configuration, allowing you to configure both localhost (development) and live (production) database credentials during installation. This enables a seamless "git push and go live" workflow where the same codebase works on both environments without manual configuration changes.
+
+### How It Works
+
+The system stores two sets of database credentials in your `.env` file:
+
+- **DB_LOCAL_*** - Credentials for your local development environment
+- **DB_LIVE_*** - Credentials for your production hosting environment
+
+When the application starts, it automatically:
+1. Detects the current environment (localhost or production)
+2. Selects the appropriate credentials
+3. Sets the active `DB_*` variables for database connections
+
+### Environment Detection
+
+The system detects **localhost** when the server name or IP matches:
+- `127.0.0.1` or `::1` (IPv4/IPv6 loopback)
+- `localhost`
+- Domains ending in `.local`, `.test`, or `.dev`
+
+All other environments are treated as **production/live**.
+
+### Credential Resolution Logic
+
+The system follows this priority when resolving credentials:
+
+| Detected Environment | Live Credentials | Local Credentials | Result |
+|---------------------|------------------|-------------------|--------|
+| Production | Available | Any | Uses Live |
+| Production | Empty/Invalid | Available | Falls back to Local |
+| Localhost | Any | Available | Uses Local |
+| Localhost | Available | Empty/Invalid | Falls back to Live |
+| Any | Empty | Empty | Redirects to Install Wizard |
+
+### Setting Up Dual-Environment
+
+#### During Installation
+
+1. In the Database Configuration step, select your primary environment (Localhost or Live)
+2. Enter credentials for your selected environment
+3. Check "Also configure Live credentials" (or Local, depending on selection)
+4. Enter credentials for the secondary environment
+5. Test both connections
+6. Continue with installation
+
+#### After Installation
+
+1. Go to Admin Panel → Settings → Database Settings
+2. Add or update Live credentials
+3. Test the connection before saving
+4. Changes take effect on the next request
+
+### Common Scenarios
+
+#### Scenario 1: Local Development First
+
+You're developing locally and will deploy to production later.
+
+1. During installation, select "Localhost"
+2. Enter your local database credentials (e.g., XAMPP defaults)
+3. Skip live credentials for now
+4. After deployment, add live credentials via Admin Settings
+
+#### Scenario 2: Production Setup with Local Testing
+
+You have production hosting ready and want to test locally too.
+
+1. During installation, select "Live"
+2. Enter your production database credentials
+3. Check "Also configure Local credentials"
+4. Enter your local development credentials
+5. Both environments are ready immediately
+
+#### Scenario 3: Forcing Localhost Credentials
+
+You want to test locally even though live credentials are configured.
+
+**Option 1: Comment out live credentials in `.env`**
+```env
+# DB_LIVE_HOST=production.host.com
+# DB_LIVE_PORT=3306
+# DB_LIVE_NAME=prod_db
+# DB_LIVE_USER=prod_user
+# DB_LIVE_PASS=prod_password
+```
+
+**Option 2: Clear live host value**
+```env
+DB_LIVE_HOST=
+```
+
+When live credentials are empty or commented out, the system automatically uses localhost credentials regardless of the detected environment.
+
+### .env File Structure
+
+After dual-environment setup, your `.env` file will contain:
+
+```env
+# =============================================================================
+# DUAL ENVIRONMENT DATABASE CONFIGURATION
+# =============================================================================
+# The system automatically detects the environment and uses appropriate credentials.
+# - On localhost: Uses DB_LOCAL_* credentials
+# - On production: Uses DB_LIVE_* credentials (if available, else falls back to local)
+
+# -----------------------------------------------------------------------------
+# ACTIVE DATABASE CREDENTIALS (Auto-populated based on environment)
+# -----------------------------------------------------------------------------
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=myapp_db
+DB_USER=root
+DB_PASS=
+DB_UNIX_SOCKET=
+
+# -----------------------------------------------------------------------------
+# LOCALHOST CREDENTIALS (Development Environment)
+# -----------------------------------------------------------------------------
+DB_LOCAL_HOST=localhost
+DB_LOCAL_PORT=3306
+DB_LOCAL_NAME=myapp_dev
+DB_LOCAL_USER=root
+DB_LOCAL_PASS=
+DB_LOCAL_UNIX_SOCKET=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock
+
+# -----------------------------------------------------------------------------
+# LIVE CREDENTIALS (Production Environment)
+# -----------------------------------------------------------------------------
+DB_LIVE_HOST=mysql.hostinger.com
+DB_LIVE_PORT=3306
+DB_LIVE_NAME=u123456789_myapp
+DB_LIVE_USER=u123456789_admin
+DB_LIVE_PASS=SecurePassword123
+DB_LIVE_UNIX_SOCKET=
+```
+
+### Troubleshooting Dual-Environment
+
+#### "Wrong database connected"
+
+**Symptoms**: Application connects to wrong database (local instead of live, or vice versa)
+
+**Solutions**:
+1. Check environment detection: Visit `/install/test-environment.php`
+2. Verify credentials are in correct sections (DB_LOCAL_* vs DB_LIVE_*)
+3. Clear any cached configuration
+4. Check if live credentials are empty (causes fallback to local)
+
+#### "Credentials not switching"
+
+**Symptoms**: Same credentials used regardless of environment
+
+**Solutions**:
+1. Ensure both credential sets are properly configured
+2. Check for typos in environment variable names
+3. Verify the `.env` file is being read (check file permissions)
+4. Restart web server to clear any cached environment
+
+#### "Connection works locally but fails on production"
+
+**Symptoms**: Local development works, production deployment fails
+
+**Solutions**:
+1. Verify DB_LIVE_* credentials are correct
+2. Check if production host allows remote connections
+3. Verify database exists on production server
+4. Check firewall rules on production server
+5. Some hosts require specific hostnames (not `localhost`)
+
+### Best Practices
+
+1. **Always test both environments** before deploying
+2. **Use different database names** for local and production to avoid confusion
+3. **Keep production credentials secure** - never commit `.env` to version control
+4. **Document your setup** for team members
+5. **Use strong passwords** for production databases
+6. **Backup before switching** environments in production
 
 ---
 
@@ -569,19 +753,36 @@ If the wizard fails or you prefer manual installation, follow these steps:
 
 ### Step 1: Configure Database
 
-1. Create `.env` file in the root directory:
-   ```env
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_DATABASE=karyalay_db
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
+1. Copy `.env.example` to `.env` in the root directory:
+   ```bash
+   cp .env.example .env
    ```
 
-2. Set file permissions:
+2. Edit `.env` and configure your database credentials:
+   ```env
+   # For localhost development
+   DB_LOCAL_HOST=localhost
+   DB_LOCAL_PORT=3306
+   DB_LOCAL_NAME=karyalay_db
+   DB_LOCAL_USER=root
+   DB_LOCAL_PASS=
+   DB_LOCAL_UNIX_SOCKET=
+
+   # For production (optional, add later if needed)
+   DB_LIVE_HOST=
+   DB_LIVE_PORT=3306
+   DB_LIVE_NAME=
+   DB_LIVE_USER=
+   DB_LIVE_PASS=
+   DB_LIVE_UNIX_SOCKET=
+   ```
+
+3. Set file permissions:
    ```bash
    chmod 600 .env
    ```
+
+**Note**: The system will automatically detect your environment and use the appropriate credentials. See [Dual-Environment Configuration](#dual-environment-configuration) for details.
 
 ### Step 2: Run Migrations
 
@@ -884,17 +1085,34 @@ Created by migrations:
 Key variables in `.env`:
 
 ```env
-# Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_DATABASE=karyalay_db
-DB_USERNAME=username
-DB_PASSWORD=password
-
 # Application
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://yourdomain.com
+
+# Active Database (auto-populated from LOCAL or LIVE based on environment)
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=karyalay_db
+DB_USER=username
+DB_PASS=password
+DB_UNIX_SOCKET=
+
+# Localhost Database Credentials
+DB_LOCAL_HOST=localhost
+DB_LOCAL_PORT=3306
+DB_LOCAL_NAME=karyalay_dev
+DB_LOCAL_USER=root
+DB_LOCAL_PASS=
+DB_LOCAL_UNIX_SOCKET=
+
+# Live/Production Database Credentials
+DB_LIVE_HOST=mysql.hostinger.com
+DB_LIVE_PORT=3306
+DB_LIVE_NAME=u123456789_karyalay
+DB_LIVE_USER=u123456789_admin
+DB_LIVE_PASS=SecurePassword123
+DB_LIVE_UNIX_SOCKET=
 
 # Session
 SESSION_LIFETIME=120
@@ -902,6 +1120,8 @@ SESSION_LIFETIME=120
 # Logging
 LOG_LEVEL=error
 ```
+
+**Note**: The system automatically detects the environment and uses either `DB_LOCAL_*` or `DB_LIVE_*` credentials. See [Dual-Environment Configuration](#dual-environment-configuration) for details.
 
 ### PHP Extensions Required
 

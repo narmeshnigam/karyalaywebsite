@@ -1293,4 +1293,196 @@ class InstallationService
             return false;
         }
     }
+
+    /**
+     * Save credentials for a specific environment
+     * 
+     * Validates and tests the database connection before saving.
+     * Uses EnvironmentConfigManager to write credentials with appropriate prefixes.
+     * 
+     * @param string $environment 'local' or 'live'
+     * @param array $credentials Database credentials (host, port, database, username, password, unix_socket)
+     * @return array Returns ['success' => bool, 'error' => string|null]
+     */
+    public function saveEnvironmentCredentials(string $environment, array $credentials): array
+    {
+        // Validate environment parameter
+        if (!in_array($environment, ['local', 'live'])) {
+            return [
+                'success' => false,
+                'error' => 'Invalid environment. Must be "local" or "live".'
+            ];
+        }
+
+        // Validate required credential fields
+        if (empty($credentials['host'])) {
+            return [
+                'success' => false,
+                'error' => 'Database host is required.'
+            ];
+        }
+
+        if (empty($credentials['database'])) {
+            return [
+                'success' => false,
+                'error' => 'Database name is required.'
+            ];
+        }
+
+        // Test the database connection before saving
+        $connectionTest = $this->testDatabaseConnection($credentials);
+        if (!$connectionTest['success']) {
+            return [
+                'success' => false,
+                'error' => 'Connection test failed: ' . $connectionTest['error']
+            ];
+        }
+
+        // Get existing credentials for the other environment
+        $configManager = new EnvironmentConfigManager();
+        $existingLocal = $configManager->readEnvironmentCredentials('local');
+        $existingLive = $configManager->readEnvironmentCredentials('live');
+
+        // Update the appropriate credential set
+        if ($environment === 'local') {
+            $localCredentials = $credentials;
+            $liveCredentials = $existingLive;
+        } else {
+            $localCredentials = $existingLocal;
+            $liveCredentials = $credentials;
+        }
+
+        // Write the dual configuration
+        $writeResult = $configManager->writeDualConfig($localCredentials, $liveCredentials);
+
+        if (!$writeResult) {
+            return [
+                'success' => false,
+                'error' => 'Failed to write credentials to configuration file.'
+            ];
+        }
+
+        return [
+            'success' => true,
+            'error' => null
+        ];
+    }
+
+    /**
+     * Get credentials for a specific environment
+     * 
+     * Reads credentials from the .env file using the appropriate prefix.
+     * 
+     * @param string $environment 'local' or 'live'
+     * @return array|null Credentials array or null if not configured
+     */
+    public function getEnvironmentCredentials(string $environment): ?array
+    {
+        // Validate environment parameter
+        if (!in_array($environment, ['local', 'live'])) {
+            return null;
+        }
+
+        $configManager = new EnvironmentConfigManager();
+        return $configManager->readEnvironmentCredentials($environment);
+    }
+
+    /**
+     * Check if credentials exist for an environment
+     * 
+     * @param string $environment 'local' or 'live'
+     * @return bool True if valid credentials exist
+     */
+    public function hasEnvironmentCredentials(string $environment): bool
+    {
+        // Validate environment parameter
+        if (!in_array($environment, ['local', 'live'])) {
+            return false;
+        }
+
+        $configManager = new EnvironmentConfigManager();
+        return $configManager->hasEnvironmentCredentials($environment);
+    }
+
+    /**
+     * Get the active environment based on detection
+     * 
+     * Uses the existing detectEnvironment method and maps the result
+     * to the credential environment names ('local' or 'live').
+     * 
+     * @return string 'local' or 'live'
+     */
+    public function getActiveEnvironment(): string
+    {
+        $detected = $this->detectEnvironment();
+        
+        // Map 'localhost' to 'local' and 'production' to 'live'
+        return $detected === 'localhost' ? 'local' : 'live';
+    }
+
+    /**
+     * Resolve and set active database credentials
+     * 
+     * Integrates with EnvironmentConfigManager to resolve the appropriate
+     * credentials based on the detected environment and sets them as
+     * active DB_ environment variables.
+     * 
+     * @return array Returns resolved credentials info with keys:
+     *               - 'success' => bool
+     *               - 'credentials' => array|null
+     *               - 'environment' => string|null ('local' or 'live')
+     *               - 'detected_environment' => string ('localhost' or 'production')
+     *               - 'error' => string|null
+     */
+    public function resolveActiveCredentials(): array
+    {
+        try {
+            $configManager = new EnvironmentConfigManager(null, $this);
+            
+            // Resolve credentials based on environment
+            $resolved = $configManager->resolveCredentials();
+            
+            // Check if we have valid credentials
+            if ($resolved['credentials'] === null) {
+                return [
+                    'success' => false,
+                    'credentials' => null,
+                    'environment' => null,
+                    'detected_environment' => $resolved['detected_environment'],
+                    'error' => 'No valid database credentials available for the detected environment.'
+                ];
+            }
+            
+            // Set the active credentials in environment variables
+            $setResult = $configManager->setActiveCredentials($resolved['credentials']);
+            
+            if (!$setResult) {
+                return [
+                    'success' => false,
+                    'credentials' => $resolved['credentials'],
+                    'environment' => $resolved['environment'],
+                    'detected_environment' => $resolved['detected_environment'],
+                    'error' => 'Failed to set active database credentials in environment.'
+                ];
+            }
+            
+            return [
+                'success' => true,
+                'credentials' => $resolved['credentials'],
+                'environment' => $resolved['environment'],
+                'detected_environment' => $resolved['detected_environment'],
+                'local_available' => $resolved['local_available'],
+                'live_available' => $resolved['live_available'],
+                'error' => null
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'credentials' => null,
+                'environment' => null,
+                'detected_environment' => $this->detectEnvironment(),
+                'error' => 'Error resolving credentials: ' . $e->getMessage()
+            ];
+        }
+    }
 }

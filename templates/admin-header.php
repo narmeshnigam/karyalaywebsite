@@ -68,7 +68,7 @@ if (strpos($request_uri, '/admin/solutions') !== false || strpos($request_uri, '
     $current_section = 'leads';
 } elseif (strpos($request_uri, '/admin/settings') !== false || strpos($request_uri, '/admin/users-and-roles') !== false) {
     $current_section = 'settings';
-} elseif (strpos($request_uri, '/admin/smtp-settings') !== false || strpos($request_uri, '/admin/payment-settings') !== false || strpos($request_uri, '/admin/localisation') !== false) {
+} elseif (strpos($request_uri, '/admin/smtp-settings') !== false || strpos($request_uri, '/admin/payment-settings') !== false || strpos($request_uri, '/admin/localisation') !== false || strpos($request_uri, '/admin/database-settings') !== false) {
     $current_section = 'integrations';
 }
 
@@ -113,6 +113,7 @@ $menu_sections = [
         'items' => [
             ['url' => '/admin/smtp-settings.php', 'label' => 'SMTP Integration', 'permission' => 'settings.smtp', 'section' => 'integrations', 'match' => '/smtp-settings'],
             ['url' => '/admin/payment-settings.php', 'label' => 'Payment Integration', 'permission' => 'settings.payment', 'section' => 'integrations', 'match' => '/payment-settings'],
+            ['url' => '/admin/database-settings.php', 'label' => 'Database', 'permission' => 'settings.general', 'section' => 'integrations', 'match' => '/database-settings'],
             ['url' => '/admin/localisation.php', 'label' => 'Localisation', 'permission' => 'settings.localisation', 'section' => 'integrations', 'match' => '/localisation'],
             ['url' => '/admin/users-and-roles.php', 'label' => 'Users & Roles', 'permission' => 'users.view', 'section' => 'settings', 'match' => '/users-and-roles'],
             ['url' => '/admin/settings/general.php', 'label' => 'General', 'permission' => 'settings.general', 'section' => 'settings', 'match' => '/settings'],

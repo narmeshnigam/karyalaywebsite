@@ -1093,3 +1093,384 @@ body {
     border-color: #10b981;
     color: #065f46;
 }
+
+
+/* =============================================================================
+   DUAL ENVIRONMENT SETUP STYLES
+   ============================================================================= */
+
+/* Environment Selector Radio Buttons */
+.environment-selector {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.environment-option {
+    flex: 1;
+    display: block;
+    padding: 20px;
+    border: 2px solid var(--wizard-gray-200);
+    border-radius: var(--wizard-border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.environment-option:hover {
+    border-color: var(--wizard-primary);
+    background: #f8faff;
+}
+
+.environment-option.selected {
+    border-color: var(--wizard-primary);
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.environment-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.environment-option .option-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.environment-option .option-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.environment-option .option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.environment-option .option-text strong {
+    font-size: 16px;
+    color: var(--wizard-gray-900);
+}
+
+.environment-option .option-text span {
+    font-size: 13px;
+    color: var(--wizard-gray-600);
+}
+
+.environment-option.selected .option-text strong {
+    color: var(--wizard-primary);
+}
+
+/* Credentials Section */
+.credentials-section {
+    background: var(--wizard-gray-50);
+    border-radius: var(--wizard-border-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.credentials-section h3 {
+    margin-top: 0;
+}
+
+/* Test Connection Row */
+.test-connection-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--wizard-gray-200);
+}
+
+.test-status {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.test-status .status-success {
+    color: var(--wizard-success);
+}
+
+.test-status .status-error {
+    color: var(--wizard-error);
+}
+
+/* Configure Both Checkbox */
+.configure-both-option {
+    padding: 16px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #86efac;
+    border-radius: var(--wizard-border-radius);
+    margin-bottom: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--wizard-primary);
+}
+
+.checkbox-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.checkbox-text strong {
+    font-size: 15px;
+    color: var(--wizard-gray-900);
+}
+
+.checkbox-text small {
+    font-size: 13px;
+    color: var(--wizard-gray-600);
+}
+
+/* Secondary Form */
+.secondary-form {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border: 1px dashed var(--wizard-gray-300);
+    border-radius: var(--wizard-border-radius);
+}
+
+.secondary-form-header {
+    margin-bottom: 20px;
+}
+
+.secondary-form-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: var(--wizard-gray-900);
+}
+
+.secondary-form-header .form-help {
+    margin: 0;
+}
+
+/* Responsive adjustments for environment selector */
+@media (max-width: 768px) {
+    .environment-selector {
+        flex-direction: column;
+    }
+    
+    .environment-option {
+        padding: 16px;
+    }
+    
+    .environment-option .option-icon {
+        font-size: 24px;
+    }
+    
+    .environment-option .option-text strong {
+        font-size: 14px;
+    }
+    
+    .test-connection-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+
+/* =============================================================================
+   CONNECTION ERROR AND SUCCESS DETAILS
+   Requirements: 6.3, 6.4, 6.5
+   ============================================================================= */
+
+/* Field Error Highlight */
+.field-error {
+    border-color: var(--wizard-error) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Connection Error Details Box */
+.connection-error-details {
+    margin-top: 16px;
+    animation: slideDown 0.3s ease;
+}
+
+.connection-error-details .error-box {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: var(--wizard-border-radius);
+    padding: 20px;
+}
+
+.connection-error-details .error-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #991b1b;
+}
+
+.connection-error-details .error-icon {
+    font-size: 20px;
+    color: var(--wizard-error);
+}
+
+.connection-error-details .error-message {
+    margin-bottom: 16px;
+}
+
+.connection-error-details .error-message p {
+    margin: 0;
+    color: #991b1b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.connection-error-details .error-technical {
+    margin-bottom: 16px;
+}
+
+.connection-error-details .error-technical details {
+    background: white;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.connection-error-details .error-technical summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #991b1b;
+    background: #fff5f5;
+}
+
+.connection-error-details .error-technical summary:hover {
+    background: #fee2e2;
+}
+
+.connection-error-details .error-technical code {
+    display: block;
+    padding: 12px 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #7f1d1d;
+    background: white;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.connection-error-details .troubleshooting-section {
+    background: white;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 14px;
+}
+
+.connection-error-details .troubleshooting-section strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #991b1b;
+}
+
+.connection-error-details .troubleshooting-section ul {
+    margin: 0;
+    padding-left: 20px;
+    list-style: disc;
+}
+
+.connection-error-details .troubleshooting-section li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #7f1d1d;
+    line-height: 1.5;
+}
+
+.connection-error-details .troubleshooting-section li:last-child {
+    margin-bottom: 0;
+}
+
+/* Connection Success Details Box */
+.connection-success-details {
+    margin-top: 16px;
+    animation: slideDown 0.3s ease;
+}
+
+.connection-success-details .success-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: var(--wizard-border-radius);
+    padding: 20px;
+}
+
+.connection-success-details .success-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #065f46;
+}
+
+.connection-success-details .success-icon {
+    font-size: 20px;
+    color: var(--wizard-success);
+}
+
+.connection-success-details .success-info p {
+    margin: 0 0 12px 0;
+    color: #065f46;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.connection-success-details .server-details {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: white;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    padding: 12px 16px;
+}
+
+.connection-success-details .server-details li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #047857;
+    line-height: 1.5;
+}
+
+.connection-success-details .server-details li:last-child {
+    margin-bottom: 0;
+}
+
+.connection-success-details .server-details strong {
+    color: #065f46;
+}
+
+/* Animation for slide down */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -5,7 +5,7 @@
  * This endpoint finalizes the installation by creating the lock file,
  * clearing wizard session data, and logging the installation completion.
  * 
- * Requirements: 1.4, 10.1
+ * Requirements: 1.4, 7.3, 10.1
  */
 
 // Start session if not already started
@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use Karyalay\Services\InstallationService;
 use Karyalay\Services\CsrfService;
 use Karyalay\Services\LoggerService;
+use Karyalay\Services\UrlService;
 
 // Set JSON response header
 header('Content-Type: application/json');
@@ -96,12 +97,17 @@ try {
         exit;
     }
     
+    // Use UrlService to resolve the correct redirect URL
+    // Requirements: 7.3 - Use resolved base URL for admin dashboard redirect
+    $urlService = new UrlService();
+    $redirectUrl = $urlService->getAdminDashboardUrl();
+    
     // Return success response
     http_response_code(200);
     echo json_encode([
         'success' => true,
         'message' => 'Installation completed successfully!',
-        'redirect' => $basePath . '/admin/dashboard.php'
+        'redirect' => $redirectUrl
     ]);
     
 } catch (Exception $e) {
